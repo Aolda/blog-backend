@@ -1,6 +1,5 @@
 from datetime import timedelta
-from fastapi import APIRouter, Depends, HTTPException, status
-# from fastapi.security import OAuth2PasswordRequestForm
+from fastapi import APIRouter, Depends, HTTPException, status, Body
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
@@ -106,7 +105,7 @@ def logout():
     
 @router.post("/refresh", response_model=Token)
 def refresh_token(
-    refresh_token: str,
+    refresh_token: str = Body(..., embed=True),
     db: Session = Depends(get_db)
 ):
     """
