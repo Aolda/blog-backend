@@ -1,6 +1,6 @@
 from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordRequestForm
+# from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
@@ -58,7 +58,7 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=Token)
 def login(
-    form_data: OAuth2PasswordRequestForm = Depends(),
+    user_in: UserLogin,
     db: Session = Depends(get_db)
 ):
     """
@@ -68,11 +68,10 @@ def login(
     """
     
     # 이메일로 사용자 찾기
-    # form_data는 필드명이 무조건 'username' (db의 username이 아님)
-    user = db.query(UserModel).filter(UserModel.email == form_data.username).first()
+    user = db.query(UserModel).filter(UserModel.email == user_in.email).first()
     
     # 사용자가 없거나 비밀번호가 틀린 경우 체크
-    if not user or not verify_password(form_data.password, user.hashed_password):
+    if not user or not verify_password(user_in.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="이메일 또는 비밀번호가 올바르지 않습니다.",
