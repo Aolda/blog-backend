@@ -34,3 +34,13 @@ class User(UserBase):
 
     # ORM 모드 설정
     model_config = ConfigDict(from_attributes=True)
+    
+# UserLogin (로그인 요청용)
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+# Token (로그인 응답용)
+class Token(BaseModel):
+    access_token: str
+    token_type: str
