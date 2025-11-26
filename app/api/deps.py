@@ -1,6 +1,6 @@
 from typing import Annotated
 from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
@@ -9,14 +9,15 @@ from app.db.database import get_db
 from app.db.models.user import User
 from app.core.security import TokenData
 
-# OAuth2 스키마 설정
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/auth/login")
+security = HTTPBearer()
 
 # 현재 사용자 가져오기
 def get_current_user(
-    token: Annotated[str, Depends(oauth2_scheme)],
+    credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)],
     db: Session = Depends(get_db)
 ) -> User:
+    token = credentials.credentials # Bearer 부분을 뗀 순수 토큰 값
+    
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="자격 증명을 검증할 수 없습니다.",
