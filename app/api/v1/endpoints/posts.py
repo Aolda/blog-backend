@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, status, HTTPException
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 
 from app.db.database import get_db
 from app.db.models import Post as PostModel, User as UserModel
@@ -36,22 +36,32 @@ def create_post(
 @router.get("/", response_model=List[PostSchema])
 def read_posts(
     db: Session = Depends(get_db),
-    skip: int = 0,
-    limit: int = 10
+    page: int = 1,
+    limit: int = 10,
+    status: str = "published"
 ):
     """
     게시글 목록 조회 API
-    - skip: 앞의 N개를 건너뜁니다.
-    - limit: 최대 N개를 가져옵니다.
+    - page: 페이지 번호
+    - limit: 페이지 당 게시글 수
     - 작성일 역순(최신순)으로 정렬하여 반환합니다.
+    - 발행된 글만 조회합니다.
     """
+    
+    query = db.query(PostModel)
+    
+    if status:
+        query = query.filter(PostModel.status == status)
+        
+    skip = (page - 1) * limit
+        
     posts = (
-        db.query(PostModel)
+        query
         .order_by(PostModel.created_at.desc())
         .offset(skip)
         .limit(limit)
         .all()
-        )
+    )
     
     return posts
 

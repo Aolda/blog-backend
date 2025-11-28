@@ -41,13 +41,16 @@ def update_user_me(
 
 @router.get("/", response_model=List[UserSchema])
 def read_users(
-    skip: int = 0,
+    page: int = 1,
     limit: int = 10,
     db: Session = Depends(get_db)
 ):
     """
     전체 사용자 목록 조회 API
     """
+    
+    skip = (page - 1) * limit
+    
     users = db.query(UserModel).offset(skip).limit(limit).all()
     return users
 
