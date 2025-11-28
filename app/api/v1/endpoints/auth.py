@@ -145,10 +145,3 @@ def refresh_token(
         "refresh_token": refresh_token
     }
 
-@router.get("/me", response_model=UserSchema)
-def read_users_me(current_user: UserModel = Depends(get_current_user)):
-    """
-    현재 로그인된 사용자 정보 조회 API
-    - 헤더에 유효한 JWT이 있어야 접근 가능합니다.
-    """
-    return current_user
