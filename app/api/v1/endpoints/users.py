@@ -9,6 +9,14 @@ from app.api.deps import get_current_user
 
 router = APIRouter()
 
+@router.get("/me", response_model=UserSchema)
+def read_users_me(current_user: UserModel = Depends(get_current_user)):
+    """
+    내 프로필 조회 API
+    - 현재 로그인한 사용자의 정보를 반환합니다.
+    """
+    return current_user
+
 @router.put("/me", response_model=UserSchema)
 def update_user_me(
     user_in: UserUpdate,
