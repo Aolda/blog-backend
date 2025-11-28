@@ -1,7 +1,10 @@
 from fastapi import FastAPI
 from app.api.v1.api_router import api_router
 
-app = FastAPI(title="ABS (Aolda Blog Service) API")
+app = FastAPI(
+    title="ABS (Aolda Blog Service) API",
+    swagger_ui_parameters={"persistAuthorization": True} # 임시 (토큰 기억)
+    )
 
 app.include_router(api_router, prefix="/api/v1")
 
