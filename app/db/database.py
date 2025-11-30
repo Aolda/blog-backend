@@ -8,7 +8,8 @@ from app.core.config import settings # config.py의 db url 가져옴
 # connect_args: PyMySQL 사용 시 발생할 수 있는 오류 방지
 engine = create_engine(
     settings.DATABASE_URL,
-    connect_args={"charset": "utf8mb4"}
+    connect_args={"charset": "utf8mb4"},
+    echo=True
 )
 
 # 데이터베이스 세션 생성

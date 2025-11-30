@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, status, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
 
 from app.db.database import get_db
@@ -38,12 +38,11 @@ def read_posts(
     db: Session = Depends(get_db),
     page: int = 1,
     limit: int = 10,
-    status: str = "published"
+    status: str = "published",
+    category_id: Optional[int] = None
 ):
     """
     게시글 목록 조회 API
-    - page: 페이지 번호
-    - limit: 페이지 당 게시글 수
     - 작성일 역순(최신순)으로 정렬하여 반환합니다.
     - 발행된 글만 조회합니다.
     """
@@ -54,9 +53,14 @@ def read_posts(
         query = query.filter(PostModel.status == status)
         
     skip = (page - 1) * limit
+    
+    if category_id:
+        query = query.filter(PostModel.category_id == category_id)
         
     posts = (
         query
+        .options(joinedload(PostModel.author))
+        .options(joinedload(PostModel.category))
         .order_by(PostModel.created_at.desc())
         .offset(skip)
         .limit(limit)
@@ -152,3 +156,4 @@ def delete_post(
     db.commit()
     
     return None
+
