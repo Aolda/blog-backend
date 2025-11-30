@@ -11,6 +11,7 @@ class Post(Base):
     content = Column(Text, nullable=True) # 마크다운 원본
     summary = Column(String(1000), nullable=True) # 요약 (자동)
     thumbnail = Column(String(255), nullable=True) # 썸네일 이미지 (선택)
+    views = Column(Integer, default=0)
 
     # 게시글 상태
     status = Column(Enum("draft", "published", name="post_status_enum"), 
