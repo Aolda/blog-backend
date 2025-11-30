@@ -34,6 +34,7 @@ class PostUpdate(BaseModel):
 # (예: GET /api/posts, GET /api/posts/{post_id})
 class Post(PostBase):
     id: int
+    views: int = 0
     created_at: datetime
     updated_at: datetime
     

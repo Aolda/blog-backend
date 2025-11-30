@@ -157,3 +157,29 @@ def delete_post(
     
     return None
 
+@router.post("/{post_id}/views", status_code=200)
+def increase_view_count(
+    post_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    게시글 조회수 증가 API
+    - 해당 게시글의 조회수가 1 증가합니다.
+    - 게시글 상세 페이지 진입 시 프론트엔드에서 호출합니다.
+    """
+    post = db.query(PostModel).filter(PostModel.id == post_id).first()
+    
+    if post is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="게시글을 찾을 수 없습니다."
+        )
+        
+    # 조회수 1 증가
+    post.views += 1
+    
+    db.add(post)
+    db.commit()
+    
+    # 변경된 조회수만 반환
+    return {"message": "View count increased", "views": post.views}
