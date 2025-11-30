@@ -1,7 +1,11 @@
 import os
 import uuid
 import aiofiles
-from fastapi import APIRouter, UploadFile, File, HTTPException, Request
+from fastapi import APIRouter, UploadFile, File, HTTPException, Request, Depends, status
+from fastapi.responses import Response
+
+from app.api.deps import get_current_user
+from app.db.models import User as UserModel
 
 router = APIRouter()
 
@@ -38,3 +42,36 @@ async def upload_image(
     file_url = f"{request.base_url}uploads/{filename}"
     
     return {"url": file_url}
+
+@router.delete("/{filename}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_image(
+    filename: str,
+    current_user: UserModel = Depends(get_current_user) # 로그인 필수
+):
+    """
+    이미지 삭제 API
+    - 서버의 uploads 폴더에서 파일을 영구 삭제합니다.
+    - 로그인한 사용자만 호출할 수 있습니다.
+    """
+    
+    # 파일 경로 보안 검사 (Directory Traversal 방지)
+    # os.path.basename을 쓰면 경로를 다 떼고 순수 파일명만 남김
+    safe_filename = os.path.basename(filename)
+    file_path = os.path.join(UPLOAD_DIR, safe_filename)
+    
+    if not os.path.exists(file_path):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="파일을 찾을 수 없습니다."
+        )
+    
+    # 파일 삭제
+    try:
+        os.remove(file_path)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"파일 삭제 중 오류가 발생했습니다: {str(e)}"
+        )
+        
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
