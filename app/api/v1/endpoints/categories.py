@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
-from app.db.models import Category as CategoryModel, User as UserModel
+from app.db.models import Category as CategoryModel, Post as PostModel, User as UserModel
 from app.db.schemas.category import CategoryCreate, Category as CategorySchema
 from app.api.deps import get_current_admin
 
@@ -78,6 +78,12 @@ def delete_category(
     category = db.query(CategoryModel).filter(CategoryModel.id == category_id).first()
     if not category:
         raise HTTPException(status_code=404, detail="카테고리를 찾을 수 없습니다.")
+    
+    # 자식 카테고리 처리
+    db.query(CategoryModel).filter(CategoryModel.parent_id == category_id).update({CategoryModel.parent_id: None})
+    
+    # 게시글 처리
+    db.query(PostModel).filter(PostModel.category_id == category_id).update({PostModel.category_id: None})
         
     db.delete(category)
     db.commit()
