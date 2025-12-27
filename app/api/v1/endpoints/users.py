@@ -1,10 +1,12 @@
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.db.database import get_db
 from app.db.models import User as UserModel
+from app.db.models import Post as PostModel
 from app.db.schemas.user import User as UserSchema, UserUpdate
+from app.db.schemas.post import Post as PostSchema
 from app.api.deps import get_current_user
 
 router = APIRouter()
@@ -72,3 +74,31 @@ def read_user_by_username(
         )
         
     return user
+
+@router.get("/{username}/posts", response_model=List[PostSchema])
+def read_user_posts(
+    username: str,
+    page: int = 1,
+    limit: int = 10,
+    db: Session = Depends(get_db)
+):
+    """
+    특정 사용자의 게시글 목록 조회
+    - 공개된(published) 글만 조회합니다.
+    """
+    user = db.query(UserModel).filter(UserModel.username == username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
+    
+    posts = (
+        db.query(PostModel)
+        .options(joinedload(PostModel.author))
+        .options(joinedload(PostModel.category))
+        .filter(PostModel.author_id == user.id)
+        .filter(PostModel.status == "published") # 공개글만!
+        .order_by(PostModel.created_at.desc())
+        .offset((page - 1) * limit)
+        .limit(limit)
+        .all()
+    )
+    return posts
