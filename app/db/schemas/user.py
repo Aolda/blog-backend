@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, ConfigDict, field_validator
+from pydantic import BaseModel, EmailStr, ConfigDict, field_validator, model_validator
 from typing import Optional
 from datetime import datetime
 
@@ -47,11 +47,11 @@ class User(UserBase):
     model_config = ConfigDict(from_attributes=True)
     
 class AuthorResponse(BaseModel):
-    id: int
+    id: str
     username: str
-    name: str
+    name: Optional[str] = None
     
-    bio: str 
+    bio: str
     avatar: str
 
     website: Optional[str] = None
@@ -60,6 +60,30 @@ class AuthorResponse(BaseModel):
     linkedin: Optional[str] = None
     discord: Optional[str] = None
     mail: Optional[str] = None
+
+    @model_validator(mode='before')
+    @classmethod
+    def map_username_to_public_id(cls, value):
+        if hasattr(value, "username"):
+            return {
+                "id": value.username,
+                "username": value.username,
+                "name": value.name,
+                "bio": value.bio,
+                "avatar": value.avatar,
+                "website": value.website,
+                "github": value.github,
+                "gitlab": value.gitlab,
+                "linkedin": value.linkedin,
+                "discord": value.discord,
+                "mail": value.mail,
+            }
+        return value
+
+    @field_validator('name', mode='before')
+    @classmethod
+    def set_default_name(cls, v, info):
+        return v or info.data.get('username')
 
     # DB에서 None이 넘어오면 -> 빈 문자열로 변환
     @field_validator('bio', mode='before')
