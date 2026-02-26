@@ -14,3 +14,9 @@ class Post(Base):
     created_at = Column(DateTime, default=datetime.now)
 
     author = relationship("User", back_populates="posts")
+    images = relationship(
+        "Image",
+        back_populates="post",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
