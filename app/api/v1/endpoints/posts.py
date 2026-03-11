@@ -1,10 +1,12 @@
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import joinedload
 from sqlalchemy.orm import Session
 from app.db.models import Post as PostModel, User as UserModel
 from app.db.schemas.post import (
     PostContentUpdate,
+    PostFrontmatter,
     PostResponse,
     PostSummaryResponse,
     PostTemplateResponse,
@@ -12,6 +14,54 @@ from app.db.schemas.post import (
 from app.api.deps import get_db, get_current_user
 
 router = APIRouter()
+
+
+def build_frontmatter(post: PostModel, author_name: str) -> PostFrontmatter:
+    date_str = post.created_at.strftime("%Y-%m-%d")
+    return PostFrontmatter(
+        title=post.title or "",
+        description=post.description or "",
+        date=date_str,
+        tags=post.tags or [],
+        image=post.image or "",
+        author=[author_name],
+    )
+
+
+def build_frontmatter_header(frontmatter: PostFrontmatter) -> str:
+    tags_text = ", ".join([f"'{tag}'" for tag in frontmatter.tags])
+    author_text = ", ".join([f"'{author}'" for author in frontmatter.author])
+    return (
+        "---\n"
+        f"title: '{frontmatter.title}'\n"
+        f"description: '{frontmatter.description}'\n"
+        f"date: {frontmatter.date}\n"
+        f"tags: [{tags_text}]\n"
+        f"image: '{frontmatter.image}'\n"
+        f"author: [{author_text}]\n"
+        "---"
+    )
+
+
+def serialize_post(post: PostModel, include_content: bool) -> dict:
+    author_name = post.author.username if post.author else ""
+    frontmatter = build_frontmatter(post, author_name)
+    payload = {
+        "id": post.id,
+        "author_id": post.author_id,
+        "views": post.views or 0,
+        "created_at": post.created_at,
+        "title": post.title,
+        "description": post.description,
+        "tags": post.tags or [],
+        "image": post.image,
+        "frontmatter": frontmatter,
+        "frontmatter_header": build_frontmatter_header(frontmatter),
+    }
+    if include_content:
+        payload["content"] = post.content
+    return payload
+
 
 @router.post("/template", response_model=PostTemplateResponse)
 def create_post_template(
@@ -36,15 +86,16 @@ def create_post_template(
     
     date_str = new_post.created_at.strftime("%Y-%m-%d")
     
-    frontmatter_example = f"""---
-title: ''
-description: ''
-date: {date_str}
-tags: []
-image: ''
-author: ['{current_user.username}']
----
-"""
+    frontmatter_example = (
+        "---\n"
+        "title: ''\n"
+        "description: ''\n"
+        f"date: {date_str}\n"
+        "tags: []\n"
+        "image: ''\n"
+        f"author: ['{current_user.username}']\n"
+        "---\n"
+    )
     
     return PostTemplateResponse(
         post_id=new_post.id,
@@ -65,12 +116,13 @@ def list_posts(
     skip = (page - 1) * limit
     posts = (
         db.query(PostModel)
+        .options(joinedload(PostModel.author))
         .order_by(PostModel.created_at.desc())
         .offset(skip)
         .limit(limit)
         .all()
     )
-    return posts
+    return [serialize_post(post, include_content=False) for post in posts]
 
 @router.get("/{post_id}", response_model=PostResponse)
 def get_post_detail(
@@ -80,10 +132,15 @@ def get_post_detail(
     """
     게시글 상세 조회 API
     """
-    post = db.query(PostModel).filter(PostModel.id == post_id).first()
+    post = (
+        db.query(PostModel)
+        .options(joinedload(PostModel.author))
+        .filter(PostModel.id == post_id)
+        .first()
+    )
     if post is None:
         raise HTTPException(status_code=404, detail="게시글을 찾을 수 없습니다.")
-    return post
+    return serialize_post(post, include_content=True)
 
 @router.put("/{post_id}/content", response_model=PostResponse)
 def update_post_content(
@@ -101,11 +158,21 @@ def update_post_content(
     if post.author_id != current_user.id:
         raise HTTPException(status_code=403, detail="본인 게시글만 수정할 수 있습니다.")
 
+    post.title = post_in.title
+    post.description = post_in.description
+    post.tags = post_in.tags
+    post.image = post_in.image
     post.content = post_in.content
     db.add(post)
     db.commit()
     db.refresh(post)
-    return post
+    post = (
+        db.query(PostModel)
+        .options(joinedload(PostModel.author))
+        .filter(PostModel.id == post_id)
+        .first()
+    )
+    return serialize_post(post, include_content=True)
 
 @router.post("/{post_id}/views")
 def increase_view_count(

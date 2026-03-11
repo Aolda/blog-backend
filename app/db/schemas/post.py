@@ -1,7 +1,7 @@
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, Field
 
 
 class PostTemplateResponse(BaseModel):
@@ -12,18 +12,34 @@ class PostTemplateResponse(BaseModel):
 
 
 class PostContentUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    tags: List[str] = Field(default_factory=list)
+    image: Optional[str] = None
     content: str
+
+
+class PostFrontmatter(BaseModel):
+    title: str
+    description: str
+    date: str
+    tags: List[str]
+    image: str
+    author: List[str]
 
 
 class PostSummaryResponse(BaseModel):
     id: int
     author_id: Optional[int] = None
-    views: Optional[int] = 0
+    views: int = 0
     created_at: datetime
-    content: Optional[str] = None
-
-    model_config = ConfigDict(from_attributes=True)
+    title: Optional[str] = None
+    description: Optional[str] = None
+    tags: List[str] = Field(default_factory=list)
+    image: Optional[str] = None
+    frontmatter: PostFrontmatter
+    frontmatter_header: str
 
 
 class PostResponse(PostSummaryResponse):
-    pass
+    content: Optional[str] = None
