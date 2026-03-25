@@ -13,7 +13,7 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql # DB 데이터 영구 저장
     healthcheck:
-      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$$MYSQL_ROOT_PASSWORD"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -24,9 +24,11 @@ services:
     restart: always
     depends_on:
       db:
-        condition: service_healthy # DB가 켜진 후에 백엔드 시작
+        condition: service_healthy # DB 켜진 후에 백엔드 시작
     ports:
       - "8000:8000"
+    env_file:
+      - .env
     environment:
       DATABASE_URL: mysql+pymysql://root:content_db_password@db:3306/abs_db
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
@@ -38,7 +40,9 @@ services:
       KEYCLOAK_REDIRECT_URI: ${KEYCLOAK_REDIRECT_URI}
       FRONTEND_URL: ${FRONTEND_URL}
       ALGORITHM: "HS256"
-      ACCESS_TOKEN_EXPIRE_MINUTES: 30
+      ACCESS_TOKEN_EXPIRE_MINUTES: 60
+      REFRESH_TOKEN_EXPIRE_MINUTES: 10080
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
     volumes:
       - .:/app
       - ./uploads:/app/uploads

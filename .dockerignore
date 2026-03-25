@@ -1,7 +1,0 @@
-__pycache__
-venv
-.env
-.git
-.gitignore
-*.pyc
-static/images/* # 이미지는 볼륨으로 따로 관리할거임
