@@ -36,7 +36,7 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)):
     if user_by_username:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="이미 사용 중인 아이디입니다."
+            detail="이미 존재하는 사용자 이름입니다."
         )
         
     # 비밀번호 해싱 및 사용자 생성

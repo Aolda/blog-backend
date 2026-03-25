@@ -1,11 +1,14 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from app.api.v1.api_router import api_router
+from starlette.middleware.sessions import SessionMiddleware
 
 app = FastAPI(
     title="ABS (Aolda Blog Service) API",
     swagger_ui_parameters={"persistAuthorization": True} # 임시 (토큰 기억)
 )
+
+app.add_middleware(SessionMiddleware, secret_key="some_random_secret_string")
 
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
