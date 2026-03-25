@@ -31,11 +31,14 @@ def create_post_template(
     date_str = new_post.created_at.strftime("%Y-%m-%d")
     
     frontmatter_example = f"""---
-title: ""
-date: "{date_str}"
-id: {new_post.id}
-author: "{current_user.username}"
----"""
+title: ''
+description: ''
+date: {date_str}
+tags: []
+image: ''
+author: ['{current_user.username}']
+---
+"""
     
     return PostTemplateResponse(
         post_id=new_post.id,

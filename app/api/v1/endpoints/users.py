@@ -1,5 +1,5 @@
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
@@ -30,6 +30,9 @@ def update_user_me(
     """
     
     update_data = user_in.model_dump(exclude_unset=True)
+    
+    if "username" in update_data:
+        del update_data["username"]
     
     for field, value in update_data.items():
         setattr(current_user, field, value)
