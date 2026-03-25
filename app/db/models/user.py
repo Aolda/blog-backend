@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, func
+from sqlalchemy import Column, Integer, String, DateTime, func, Text
 from sqlalchemy.orm import relationship
 
 from app.db.database import Base
@@ -12,8 +12,15 @@ class User(Base):
     hashed_password = Column(String(255), nullable=False) # 비밀번호는 해시로 저장
 
     name = Column(String(100), nullable=True)
-    bio = Column(String(500), nullable=True) # 자기소개
-    profile = Column(String(255), nullable=True) # 프로필 사진 URL
+    bio = Column(Text, nullable=True) # 자기소개
+    avatar = Column(String(2048), nullable=True) # 프로필 사진 URL
+    
+    website = Column(String(2048), nullable=True)
+    github = Column(String(2048), nullable=True)
+    gitlab = Column(String(2048), nullable=True)
+    linkedin = Column(String(2048), nullable=True)
+    discord = Column(String(2048), nullable=True)
+    mail = Column(String(2048), nullable=True)
 
     role = Column(String(50), nullable=False, default="writer")
 

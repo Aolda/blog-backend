@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.db.database import get_db
 from app.db.models import User as UserModel
-from app.db.schemas.user import User as UserSchema, UserUpdate
+from app.db.schemas.user import User as UserSchema, UserUpdate, AuthorResponse
 from app.api.deps import get_current_user
 
 router = APIRouter()
@@ -33,6 +33,8 @@ def update_user_me(
     
     if "username" in update_data:
         del update_data["username"]
+    if "email" in update_data:
+        del update_data["email"]
     
     for field, value in update_data.items():
         setattr(current_user, field, value)
@@ -43,6 +45,20 @@ def update_user_me(
     
     return current_user
 
+# 블로그용 작성자 목록
+@router.get("/authors", response_model=List[AuthorResponse])
+def read_authors(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db)
+):
+    """
+    블로그 작성자 목록 조회 API (프론트엔드 연동용)
+    """
+    
+    users = db.query(UserModel).order_by(UserModel.id.desc()).offset(skip).limit(limit).all()
+    return users
+
 @router.get("/", response_model=List[UserSchema])
 def read_users(
     page: int = 1,
@@ -50,7 +66,7 @@ def read_users(
     db: Session = Depends(get_db)
 ):
     """
-    전체 사용자 목록 조회 API
+    전체 사용자 목록 조회 API (관리자용)
     """
     
     skip = (page - 1) * limit
@@ -58,14 +74,13 @@ def read_users(
     users = db.query(UserModel).offset(skip).limit(limit).all()
     return users
 
-@router.get("/{username}", response_model=UserSchema)
+@router.get("/{username}", response_model=AuthorResponse)
 def read_user_by_username(
     username: str,
     db: Session = Depends(get_db)
 ):
     """
     특정 사용자 프로필 조회 API
-    - username(아이디)으로 사용자를 찾아 정보를 반환합니다.
     """
     user = db.query(UserModel).filter(UserModel.username == username).first()
     
