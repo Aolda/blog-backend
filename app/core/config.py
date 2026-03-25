@@ -1,13 +1,11 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
-    # .env 파일을 읽어오도록 설정
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
         extra='ignore')
 
-    # 형식: "mysql+pymysql://<사용자>:<비밀번호>@<호스트>:<포트>/<DB이름>"
     DATABASE_URL: str
 
     # JWT 설정
@@ -20,5 +18,11 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: str
     GOOGLE_CLIENT_SECRET: str
 
-# 설정 객체 인스턴스 생성
+    # Keycloak OIDC
+    KEYCLOAK_ISSUER_URI: str
+    KEYCLOAK_CLIENT_ID: str
+    KEYCLOAK_CLIENT_SECRET: str
+    KEYCLOAK_REDIRECT_URI: str = "https://blog-api.aoldacloud.com/api/v1/auth/google/callback"
+    FRONTEND_URL: str = "https://blog.aoldacloud.com"
+
 settings = Settings()

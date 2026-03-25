@@ -22,7 +22,7 @@ from pydantic import BaseModel
 from app.core.config import settings
 
 class TokenData(BaseModel):
-    username: Optional[str] = None
+    subject: Optional[str] = None
 
 # 액세스 토큰 생성 함수
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:

@@ -29,6 +29,7 @@ class UserUpdate(BaseModel):
 # API가 사용자 정보를 응답(Response)할 때 사용할 스키마
 class User(UserBase):
     id: int
+    keycloak_sub: Optional[str] = None
     bio: Optional[str] = None
     avatar: Optional[str] = None
     role: str

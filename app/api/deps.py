@@ -11,6 +11,13 @@ from app.core.security import TokenData
 
 security = HTTPBearer()
 
+def get_user_by_subject(db: Session, subject: str) -> User | None:
+    user = db.query(User).filter(User.keycloak_sub == subject).first()
+    if user is not None:
+        return user
+    return db.query(User).filter(User.username == subject).first()
+
+
 # 현재 사용자 가져오기
 def get_current_user(
     credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)],
@@ -27,15 +34,15 @@ def get_current_user(
     try:
         # 토큰 디코딩
         payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.ALGORITHM])
-        username: str = payload.get("sub")
-        if username is None:
+        subject: str = payload.get("sub")
+        if subject is None:
             raise credentials_exception
-        token_data = TokenData(username=username)
+        token_data = TokenData(subject=subject)
     except JWTError:
         raise credentials_exception
     
     # DB에서 사용자 확인
-    user = db.query(User).filter(User.username == token_data.username).first()
+    user = get_user_by_subject(db, token_data.subject)
     if user is None:
         raise credentials_exception
     
