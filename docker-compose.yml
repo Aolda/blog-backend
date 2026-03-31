@@ -1,0 +1,39 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: abs_db_container
+    restart: always
+    environment:
+      MYSQL_DATABASE: abs_db
+      MYSQL_ROOT_PASSWORD: content_db_password
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql # DB 데이터 영구 저장
+    healthcheck:
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: .
+    container_name: abs_backend_container
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy # DB가 켜진 후에 백엔드 시작
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: mysql+pymysql://root:content_db_password@db:3306/abs_db
+      JWT_SECRET_KEY: "change_this_to_random_secret_key"
+      ALGORITHM: "HS256"
+      ACCESS_TOKEN_EXPIRE_MINUTES: 30
+    volumes:
+      - ./static:/app/static # 로컬 static 폴더와 컨테이너 내부 static 폴더 동기화 (이미지 보존)
+
+volumes:
+  mysql_data:
