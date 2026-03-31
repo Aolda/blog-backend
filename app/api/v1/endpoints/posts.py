@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from datetime import datetime
 from app.db.models import Post as PostModel, User as UserModel
@@ -54,14 +54,17 @@ def increase_view_count(
     """
     post = db.query(PostModel).filter(PostModel.id == post_id).first()
     
-    if post:
-        post.views += 1
+    if post is None:
+        raise HTTPException(status_code=404, detail="게시글을 찾을 수 없습니다.")
+        
+    post.views += 1
+
+    db.add(post)
+    db.commit()
     
-        db.add(post)
-        db.commit()
-        return {"views": post.views}
+    db.refresh(post)
     
-    return {"error": "Post not found"}
+    return {"views": post.views}
 
 @router.get("/{post_id}/views")
 def get_view_count(
@@ -73,8 +76,8 @@ def get_view_count(
     """
     post = db.query(PostModel).filter(PostModel.id == post_id).first()
     
-    if post:
-        return {"views": post.views}
+    if post is None:
+        raise HTTPException(status_code=404, detail="게시글을 찾을 수 없습니다.")
     
-    return {"views": 0}
+    return {"views": post.views}
 
