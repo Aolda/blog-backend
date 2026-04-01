@@ -59,21 +59,6 @@ def read_authors(
     users = db.query(UserModel).order_by(UserModel.id.desc()).offset(skip).limit(limit).all()
     return users
 
-@router.get("/", response_model=List[UserSchema])
-def read_users(
-    page: int = 1,
-    limit: int = 10,
-    db: Session = Depends(get_db)
-):
-    """
-    전체 사용자 목록 조회 API (관리자용)
-    """
-    
-    skip = (page - 1) * limit
-    
-    users = db.query(UserModel).offset(skip).limit(limit).all()
-    return users
-
 @router.get("/{username}", response_model=AuthorResponse)
 def read_user_by_username(
     username: str,
