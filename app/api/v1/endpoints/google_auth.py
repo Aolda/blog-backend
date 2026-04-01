@@ -151,7 +151,6 @@ async def google_auth_callback(request: Request, db: Session = Depends(get_db)):
             username=username,
             hashed_password=get_password_hash(str(uuid.uuid4())),
             name=claims.get("name"),
-            avatar=claims.get("picture"),
             role="writer",
         )
     else:
@@ -159,10 +158,8 @@ async def google_auth_callback(request: Request, db: Session = Depends(get_db)):
         if email:
             user.email = email
             user.mail = user.mail or email
-        if claims.get("name"):
+        if not user.name and claims.get("name"):
             user.name = claims["name"]
-        if claims.get("picture"):
-            user.avatar = claims["picture"]
 
     db.add(user)
     db.commit()
