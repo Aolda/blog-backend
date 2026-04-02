@@ -4,14 +4,15 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
 WORKDIR /app
+RUN mkdir -p ./uploads
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir -r requirements.txt
 
-COPY . .
-
-RUN mkdir -p /app/uploads
+COPY alembic.ini ./alembic.ini
+COPY app ./app
+COPY alembic ./alembic
 
 EXPOSE 8000
 
