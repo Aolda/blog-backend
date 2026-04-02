@@ -10,6 +10,7 @@ from app.db.models.user import User
 from app.core.security import TokenData
 
 security = HTTPBearer()
+optional_security = HTTPBearer(auto_error=False)
 
 def get_user_by_subject(db: Session, subject: str) -> User | None:
     user = db.query(User).filter(User.keycloak_sub == subject).first()
@@ -57,3 +58,22 @@ def get_current_admin(
             detail="관리자 권한이 필요합니다."
         )
     return current_user
+
+
+def get_optional_current_user(
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(optional_security)],
+    db: Session = Depends(get_db)
+) -> User | None:
+    if credentials is None:
+        return None
+
+    token = credentials.credentials
+    try:
+        payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.ALGORITHM])
+        subject: str | None = payload.get("sub")
+        if subject is None:
+            return None
+    except JWTError:
+        return None
+
+    return get_user_by_subject(db, subject)

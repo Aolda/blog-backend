@@ -11,7 +11,7 @@ from app.db.schemas.post import (
     PostSummaryResponse,
     PostTemplateResponse,
 )
-from app.api.deps import get_db, get_current_user
+from app.api.deps import get_db, get_current_user, get_optional_current_user
 
 router = APIRouter()
 
@@ -58,13 +58,18 @@ def build_frontmatter_header(frontmatter: PostFrontmatter) -> str:
     )
 
 
-def serialize_post(post: PostModel, include_content: bool) -> dict:
+def serialize_post(
+    post: PostModel,
+    include_content: bool,
+    current_user: UserModel | None = None,
+) -> dict:
     author_names = get_post_author_names(post)
     frontmatter = build_frontmatter(post, author_names)
     payload = {
         "id": post.id,
         "author_id": post.author_id,
         "authors": author_names,
+        "can_edit": bool(current_user and can_edit_post(post, current_user)),
         "views": post.views or 0,
         "created_at": post.created_at,
         "title": post.title,
@@ -126,7 +131,8 @@ def create_post_template(
 def list_posts(
     page: int = 1,
     limit: int = 20,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserModel | None = Depends(get_optional_current_user),
 ):
     """
     게시글 목록 조회 API
@@ -140,12 +146,13 @@ def list_posts(
         .limit(limit)
         .all()
     )
-    return [serialize_post(post, include_content=False) for post in posts]
+    return [serialize_post(post, include_content=False, current_user=current_user) for post in posts]
 
 @router.get("/{post_id}", response_model=PostResponse)
 def get_post_detail(
     post_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserModel | None = Depends(get_optional_current_user),
 ):
     """
     게시글 상세 조회 API
@@ -158,7 +165,7 @@ def get_post_detail(
     )
     if post is None:
         raise HTTPException(status_code=404, detail="게시글을 찾을 수 없습니다.")
-    return serialize_post(post, include_content=True)
+    return serialize_post(post, include_content=True, current_user=current_user)
 
 @router.put("/{post_id}/content", response_model=PostResponse)
 def update_post_content(
@@ -208,7 +215,7 @@ def update_post_content(
         .filter(PostModel.id == post_id)
         .first()
     )
-    return serialize_post(post, include_content=True)
+    return serialize_post(post, include_content=True, current_user=current_user)
 
 @router.post("/{post_id}/views")
 def increase_view_count(

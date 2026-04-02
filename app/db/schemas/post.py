@@ -34,6 +34,7 @@ class PostSummaryResponse(BaseModel):
     id: int
     author_id: Optional[int] = None
     authors: List[str] = Field(default_factory=list)
+    can_edit: bool = False
     views: int = 0
     created_at: datetime
     title: Optional[str] = None
