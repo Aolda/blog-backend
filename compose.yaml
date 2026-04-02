@@ -1,0 +1,38 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: abs_db_container
+    restart: always
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - '3307:3306'
+    volumes:
+      - mysql_data:/var/lib/mysql # DB 데이터 영구 저장
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost', '-u', 'root', '-p${MYSQL_ROOT_PASSWORD}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: .
+    container_name: abs_backend_container
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy # DB 켜진 후에 백엔드 시작
+    ports:
+      - '8000:8000'
+    env_file:
+      - .env
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    volumes:
+      - .:/app
+      - ./uploads:/app/uploads
+
+volumes:
+  mysql_data:
