@@ -1,0 +1,50 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: abs_db_container
+    restart: always
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-abs_db}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_USER: ${MYSQL_USER:-user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-password}
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql # DB 데이터 영구 저장
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: .
+    container_name: abs_backend_container
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy # DB 켜진 후에 백엔드 시작
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: mysql+pymysql://root:${MYSQL_ROOT_PASSWORD}@db:3306/${MYSQL_DATABASE:-abs_db}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      KEYCLOAK_ISSUER_URI: ${KEYCLOAK_ISSUER_URI}
+      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID}
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET}
+      API_SERVER_URL: ${API_SERVER_URL}
+      CONSOLE_PAGE_URL: ${CONSOLE_PAGE_URL}
+      ALGORITHM: "HS256"
+      ACCESS_TOKEN_EXPIRE_MINUTES: 60
+      REFRESH_TOKEN_EXPIRE_MINUTES: 10080
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    volumes:
+      - ./uploads:/app/uploads
+
+volumes:
+  mysql_data:
