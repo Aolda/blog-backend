@@ -1,0 +1,75 @@
+name: Deploy
+
+on:
+  workflow_run:
+    workflows:
+      - Build Docker Image
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: Existing immutable image tag to deploy, for example sha-<git-sha>
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-production:
+    if: (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' ) || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    environment: production
+    env:
+      DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+
+    steps:
+      - name: Resolve image coordinates
+        id: vars
+        run: |
+          if [ -z "$DEPLOY_PATH" ]; then
+            echo "DEPLOY_PATH environment variable is not configured for the production environment." >&2
+            exit 1
+          fi
+
+          image_name=$(printf '%s' "$GITHUB_REPOSITORY" | tr '[:upper:]' '[:lower:]')
+
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            image_tag="sha-${{ github.event.workflow_run.head_sha }}"
+          else
+            image_tag="${{ inputs.image_tag }}"
+          fi
+
+          echo "deploy_path=$DEPLOY_PATH" >> "$GITHUB_OUTPUT"
+          echo "image_name=$image_name" >> "$GITHUB_OUTPUT"
+          echo "image_tag=$image_tag" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy production
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          APP_IMAGE_TAG: ${{ steps.vars.outputs.image_tag }}
+          IMAGE_NAME: ${{ steps.vars.outputs.image_name }}
+          DEPLOY_PATH: ${{ steps.vars.outputs.deploy_path }}
+        with:
+          host: ${{ vars.SSH_HOST }}
+          username: ${{ vars.SSH_USER }}
+          port: ${{ vars.SSH_PORT }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: APP_IMAGE_TAG,DEPLOY_PATH,IMAGE_NAME
+          script: |
+            set -euo pipefail
+            cd "$DEPLOY_PATH"
+
+            cat > ".env.release" <<EOF
+            APP_IMAGE_TAG=$APP_IMAGE_TAG
+            IMAGE_NAME=$IMAGE_NAME
+            EOF
+            chmod 600 ".env.release"
+
+            docker compose --env-file .env --env-file ".env.release" pull backend
+            docker compose --env-file .env --env-file ".env.release" up -d backend
+            docker compose --env-file .env --env-file ".env.release" ps
