@@ -151,7 +151,7 @@ def build_frontend_callback_url_for_origin(
 
 
 @router.get("/login")
-async def google_login(request: Request):
+async def keycloak_login(request: Request):
     """
     Keycloak 로그인 페이지로 이동
     """
@@ -167,8 +167,8 @@ async def google_login(request: Request):
     return response
 
 
-@router.get("/callback", name="google_auth_callback")
-async def google_auth_callback(request: Request, db: Session = Depends(get_db)):
+@router.get("/callback", name="keycloak_auth_callback")
+async def keycloak_auth_callback(request: Request, db: Session = Depends(get_db)):
     """
     Keycloak 인증 후 처리
     - keycloak_sub로 기존 유저 조회

@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60  # 60분
     REFRESH_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7 # 7일
     
-    # Google Auth
+    # OAuth / OIDC
     GOOGLE_CLIENT_ID: str
     GOOGLE_CLIENT_SECRET: str
 
@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     KEYCLOAK_ISSUER_URI: str
     KEYCLOAK_CLIENT_ID: str
     KEYCLOAK_CLIENT_SECRET: str
-    KEYCLOAK_REDIRECT_URI: str = "https://blog-api.aoldacloud.com/api/v1/auth/google/callback"
+    KEYCLOAK_REDIRECT_URI: str = "https://blog-api.aoldacloud.com/api/v1/auth/callback"
     FRONTEND_URL: str = "https://blog.aoldacloud.com"
 
 settings = Settings()
