@@ -1,6 +1,7 @@
 import re
 import uuid
 from typing import Any
+from urllib.parse import parse_qs, urlparse
 
 from authlib.integrations.starlette_client import OAuth
 from fastapi import APIRouter, Request, Depends, HTTPException, status
@@ -92,9 +93,59 @@ async def load_claims_from_keycloak(request: Request, token: dict[str, Any]) -> 
     )
 
 
-def build_frontend_callback_url(access_token: str, refresh_token: str) -> str:
+def normalize_console_origin(url: str | None) -> str | None:
+    if not url:
+        return None
+
+    parsed = urlparse(url)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        return None
+
+    hostname = parsed.hostname or ""
+    is_local = hostname in {"localhost", "127.0.0.1"} or hostname.endswith(".localhost")
+    configured_origin = urlparse(settings.FRONTEND_URL).netloc == parsed.netloc
+
+    if not (is_local or configured_origin):
+        return None
+
+    return f"{parsed.scheme}://{parsed.netloc}"
+
+
+def resolve_console_origin(request: Request) -> str:
+    requested = normalize_console_origin(request.query_params.get("console_page_url"))
+    if requested:
+        return requested
+
+    referer = normalize_console_origin(request.headers.get("referer"))
+    if referer:
+        return referer
+
+    return settings.FRONTEND_URL.rstrip("/")
+
+
+def store_console_origin_for_state(request: Request, state: str, console_origin: str) -> None:
+    state_map = dict(request.session.get("oauth_console_origins", {}))
+    state_map[state] = console_origin
+    request.session["oauth_console_origins"] = state_map
+
+
+def pop_console_origin_for_state(request: Request, state: str | None) -> str:
+    state_map = dict(request.session.get("oauth_console_origins", {}))
+    if not state:
+        return settings.FRONTEND_URL.rstrip("/")
+
+    console_origin = state_map.pop(state, None)
+    request.session["oauth_console_origins"] = state_map
+    return console_origin or settings.FRONTEND_URL.rstrip("/")
+
+
+def build_frontend_callback_url_for_origin(
+    console_origin: str,
+    access_token: str,
+    refresh_token: str,
+) -> str:
     return (
-        f"{settings.FRONTEND_URL.rstrip('/')}/auth/callback"
+        f"{console_origin.rstrip('/')}/auth/callback"
         f"?status=success&access_token={access_token}&refresh_token={refresh_token}"
     )
 
@@ -105,7 +156,15 @@ async def google_login(request: Request):
     Keycloak 로그인 페이지로 이동
     """
     redirect_uri = settings.KEYCLOAK_REDIRECT_URI
-    return await oauth.keycloak.authorize_redirect(request, redirect_uri)
+    console_origin = resolve_console_origin(request)
+    response = await oauth.keycloak.authorize_redirect(request, redirect_uri)
+
+    location = response.headers.get("location", "")
+    state = parse_qs(urlparse(location).query).get("state", [None])[0]
+    if state:
+        store_console_origin_for_state(request, state, console_origin)
+
+    return response
 
 
 @router.get("/callback", name="google_auth_callback")
@@ -167,7 +226,10 @@ async def google_auth_callback(request: Request, db: Session = Depends(get_db)):
 
     access_token = create_access_token(data={"sub": user.username})
     refresh_token = create_refresh_token(data={"sub": user.username})
-    return RedirectResponse(url=build_frontend_callback_url(access_token, refresh_token))
+    console_origin = pop_console_origin_for_state(request, request.query_params.get("state"))
+    return RedirectResponse(
+        url=build_frontend_callback_url_for_origin(console_origin, access_token, refresh_token)
+    )
 
 
 @router.post("/finish", status_code=status.HTTP_410_GONE)
