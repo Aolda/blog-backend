@@ -1,6 +1,7 @@
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import Response
 from sqlalchemy.orm import joinedload
 from sqlalchemy.orm import Session
 from app.db.models import Post as PostModel, User as UserModel
@@ -216,6 +217,32 @@ def update_post_content(
         .first()
     )
     return serialize_post(post, include_content=True, current_user=current_user)
+
+
+@router.delete("/{post_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_post(
+    post_id: int,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user),
+):
+    """
+    게시글 삭제 API
+    - 공동 편집자만 삭제 가능.
+    """
+    post = (
+        db.query(PostModel)
+        .options(joinedload(PostModel.users))
+        .filter(PostModel.id == post_id)
+        .first()
+    )
+    if post is None:
+        raise HTTPException(status_code=404, detail="게시글을 찾을 수 없습니다.")
+    if not can_edit_post(post, current_user):
+        raise HTTPException(status_code=403, detail="공동 편집자만 게시글을 삭제할 수 있습니다.")
+
+    db.delete(post)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 @router.post("/{post_id}/views")
 def increase_view_count(
