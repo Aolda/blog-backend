@@ -53,7 +53,7 @@ class AuthorResponse(BaseModel):
     name: Optional[str] = None
     
     bio: str
-    avatar: str
+    avatar: Optional[str] = None
 
     website: Optional[str] = None
     github: Optional[str] = None
@@ -91,15 +91,6 @@ class AuthorResponse(BaseModel):
     @classmethod
     def set_default_bio(cls, v):
         return v or ""
-
-    # DB에서 None이 넘어오면 -> 기본 이미지로 변환
-    @field_validator('avatar', mode='before')
-    @classmethod
-    def set_default_avatar(cls, v, info):
-        if not v:
-            name = info.data.get('name', 'User')
-            return f"https://ui-avatars.com/api/?name={name}&background=random"
-        return v
 
     model_config = ConfigDict(from_attributes=True)
     
