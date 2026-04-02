@@ -103,7 +103,7 @@ def normalize_console_origin(url: str | None) -> str | None:
 
     hostname = parsed.hostname or ""
     is_local = hostname in {"localhost", "127.0.0.1"} or hostname.endswith(".localhost")
-    configured_origin = urlparse(settings.FRONTEND_URL).netloc == parsed.netloc
+    configured_origin = urlparse(settings.CONSOLE_PAGE_URL).netloc == parsed.netloc
 
     if not (is_local or configured_origin):
         return None
@@ -120,7 +120,7 @@ def resolve_console_origin(request: Request) -> str:
     if referer:
         return referer
 
-    return settings.FRONTEND_URL.rstrip("/")
+    return settings.CONSOLE_PAGE_URL.rstrip("/")
 
 
 def store_console_origin_for_state(request: Request, state: str, console_origin: str) -> None:
@@ -132,11 +132,15 @@ def store_console_origin_for_state(request: Request, state: str, console_origin:
 def pop_console_origin_for_state(request: Request, state: str | None) -> str:
     state_map = dict(request.session.get("oauth_console_origins", {}))
     if not state:
-        return settings.FRONTEND_URL.rstrip("/")
+        return settings.CONSOLE_PAGE_URL.rstrip("/")
 
     console_origin = state_map.pop(state, None)
     request.session["oauth_console_origins"] = state_map
-    return console_origin or settings.FRONTEND_URL.rstrip("/")
+    return console_origin or settings.CONSOLE_PAGE_URL.rstrip("/")
+
+
+def build_keycloak_callback_url() -> str:
+    return f"{settings.API_SERVER_URL.rstrip('/')}/api/v1/auth/callback"
 
 
 def build_frontend_callback_url_for_origin(
@@ -155,7 +159,7 @@ async def keycloak_login(request: Request):
     """
     Keycloak 로그인 페이지로 이동
     """
-    redirect_uri = settings.KEYCLOAK_REDIRECT_URI
+    redirect_uri = build_keycloak_callback_url()
     console_origin = resolve_console_origin(request)
     response = await oauth.keycloak.authorize_redirect(request, redirect_uri)
 

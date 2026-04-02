@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     KEYCLOAK_ISSUER_URI: str
     KEYCLOAK_CLIENT_ID: str
     KEYCLOAK_CLIENT_SECRET: str
-    KEYCLOAK_REDIRECT_URI: str = "https://blog-api.aoldacloud.com/api/v1/auth/callback"
-    FRONTEND_URL: str = "https://blog.aoldacloud.com"
+    API_SERVER_URL: str = "https://blog-api.aoldacloud.com"
+    CONSOLE_PAGE_URL: str = "https://blog.aoldacloud.com"
 
 settings = Settings()
