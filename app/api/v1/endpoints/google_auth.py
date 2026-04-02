@@ -4,7 +4,7 @@ from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 from authlib.integrations.starlette_client import OAuth
-from fastapi import APIRouter, Request, Depends, HTTPException, status
+from fastapi import APIRouter, Request, Depends, HTTPException
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
@@ -229,12 +229,4 @@ async def google_auth_callback(request: Request, db: Session = Depends(get_db)):
     console_origin = pop_console_origin_for_state(request, request.query_params.get("state"))
     return RedirectResponse(
         url=build_frontend_callback_url_for_origin(console_origin, access_token, refresh_token)
-    )
-
-
-@router.post("/finish", status_code=status.HTTP_410_GONE)
-def finish_google_register():
-    raise HTTPException(
-        status_code=status.HTTP_410_GONE,
-        detail="신규 회원가입은 Keycloak에서 처리됩니다.",
     )
