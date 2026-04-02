@@ -2,6 +2,7 @@ from sqlalchemy import Column, Integer, String, DateTime, func, Text
 from sqlalchemy.orm import relationship
 
 from app.db.database import Base
+from app.db.models.post_user import post_users
 
 class User(Base):
     __tablename__ = "users"
@@ -31,4 +32,5 @@ class User(Base):
     # 관계 설정 (1:N)
     # 'User' 모델에서 'Post' 모델을 참조할 때 사용할 이름
     # back_populates는 Post 모델에서 User를 참조할 이름
-    posts = relationship("Post", back_populates="author")
+    authored_posts = relationship("Post", back_populates="author", foreign_keys="Post.author_id")
+    posts = relationship("Post", secondary=post_users, back_populates="users")

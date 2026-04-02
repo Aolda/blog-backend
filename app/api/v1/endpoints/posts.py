@@ -16,7 +16,22 @@ from app.api.deps import get_db, get_current_user
 router = APIRouter()
 
 
-def build_frontmatter(post: PostModel, author_name: str) -> PostFrontmatter:
+def can_edit_post(post: PostModel, current_user: UserModel) -> bool:
+    if any(user.id == current_user.id for user in post.users):
+        return True
+    return post.author_id == current_user.id
+
+
+def get_post_author_names(post: PostModel) -> List[str]:
+    usernames = [user.username for user in post.users if user.username]
+    if usernames:
+        return sorted(set(usernames))
+    if post.author and post.author.username:
+        return [post.author.username]
+    return []
+
+
+def build_frontmatter(post: PostModel, author_names: List[str]) -> PostFrontmatter:
     date_str = post.created_at.strftime("%Y-%m-%d")
     return PostFrontmatter(
         title=post.title or "",
@@ -24,7 +39,7 @@ def build_frontmatter(post: PostModel, author_name: str) -> PostFrontmatter:
         date=date_str,
         tags=post.tags or [],
         image=post.image or "",
-        author=[author_name],
+        author=author_names,
     )
 
 
@@ -44,11 +59,12 @@ def build_frontmatter_header(frontmatter: PostFrontmatter) -> str:
 
 
 def serialize_post(post: PostModel, include_content: bool) -> dict:
-    author_name = post.author.username if post.author else ""
-    frontmatter = build_frontmatter(post, author_name)
+    author_names = get_post_author_names(post)
+    frontmatter = build_frontmatter(post, author_names)
     payload = {
         "id": post.id,
         "author_id": post.author_id,
+        "authors": author_names,
         "views": post.views or 0,
         "created_at": post.created_at,
         "title": post.title,
@@ -77,7 +93,8 @@ def create_post_template(
     # db에 ID 발급용 레코드 생성
     new_post = PostModel(
         author_id=current_user.id,
-        views=0
+        views=0,
+        users=[current_user],
     )
     
     db.add(new_post)
@@ -100,6 +117,7 @@ def create_post_template(
     return PostTemplateResponse(
         post_id=new_post.id,
         author_name=current_user.username,
+        author_names=[current_user.username],
         created_at=date_str,
         frontmatter_example=frontmatter_example
     )
@@ -116,7 +134,7 @@ def list_posts(
     skip = (page - 1) * limit
     posts = (
         db.query(PostModel)
-        .options(joinedload(PostModel.author))
+        .options(joinedload(PostModel.author), joinedload(PostModel.users))
         .order_by(PostModel.created_at.desc())
         .offset(skip)
         .limit(limit)
@@ -134,7 +152,7 @@ def get_post_detail(
     """
     post = (
         db.query(PostModel)
-        .options(joinedload(PostModel.author))
+        .options(joinedload(PostModel.author), joinedload(PostModel.users))
         .filter(PostModel.id == post_id)
         .first()
     )
@@ -155,20 +173,38 @@ def update_post_content(
     post = db.query(PostModel).filter(PostModel.id == post_id).first()
     if post is None:
         raise HTTPException(status_code=404, detail="게시글을 찾을 수 없습니다.")
-    if post.author_id != current_user.id:
-        raise HTTPException(status_code=403, detail="본인 게시글만 수정할 수 있습니다.")
+    if not can_edit_post(post, current_user):
+        raise HTTPException(status_code=403, detail="공동 편집자만 게시글을 수정할 수 있습니다.")
 
     post.title = post_in.title
     post.description = post_in.description
     post.tags = post_in.tags
     post.image = post_in.image
     post.content = post_in.content
+    if post_in.authors is not None:
+        author_usernames = list(dict.fromkeys(post_in.authors))
+        authors = (
+            db.query(UserModel)
+            .filter(UserModel.username.in_(author_usernames))
+            .all()
+        )
+        found_usernames = {user.username for user in authors}
+        missing_usernames = [
+            username for username in author_usernames if username not in found_usernames
+        ]
+        if missing_usernames:
+            raise HTTPException(
+                status_code=400,
+                detail=f"존재하지 않는 작성자입니다: {', '.join(missing_usernames)}",
+            )
+        post.users = authors
+
     db.add(post)
     db.commit()
     db.refresh(post)
     post = (
         db.query(PostModel)
-        .options(joinedload(PostModel.author))
+        .options(joinedload(PostModel.author), joinedload(PostModel.users))
         .filter(PostModel.id == post_id)
         .first()
     )

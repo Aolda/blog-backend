@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 class PostTemplateResponse(BaseModel):
     post_id: int
     author_name: str
+    author_names: List[str] = Field(default_factory=list)
     created_at: str
     frontmatter_example: str
 
@@ -17,6 +18,7 @@ class PostContentUpdate(BaseModel):
     tags: List[str] = Field(default_factory=list)
     image: Optional[str] = None
     content: str
+    authors: Optional[List[str]] = None
 
 
 class PostFrontmatter(BaseModel):
@@ -31,6 +33,7 @@ class PostFrontmatter(BaseModel):
 class PostSummaryResponse(BaseModel):
     id: int
     author_id: Optional[int] = None
+    authors: List[str] = Field(default_factory=list)
     views: int = 0
     created_at: datetime
     title: Optional[str] = None

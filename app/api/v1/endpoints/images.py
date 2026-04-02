@@ -20,6 +20,12 @@ if not os.path.exists(UPLOAD_DIR):
     os.makedirs(UPLOAD_DIR)
 
 
+def can_edit_post(post: PostModel, current_user: UserModel) -> bool:
+    if any(user.id == current_user.id for user in post.users):
+        return True
+    return post.author_id == current_user.id
+
+
 @router.post("/", response_model=ImageUploadResponse, status_code=201)
 async def upload_image(
     request: Request,
@@ -35,8 +41,8 @@ async def upload_image(
     post = db.query(PostModel).filter(PostModel.id == post_id).first()
     if post is None:
         raise HTTPException(status_code=404, detail="게시글을 찾을 수 없습니다.")
-    if post.author_id != current_user.id:
-        raise HTTPException(status_code=403, detail="본인 게시글에만 이미지를 업로드할 수 있습니다.")
+    if not can_edit_post(post, current_user):
+        raise HTTPException(status_code=403, detail="공동 편집자만 이미지를 업로드할 수 있습니다.")
 
     filename = f"{uuid.uuid4()}{os.path.splitext(file.filename)[1]}"
     file_path = os.path.join(UPLOAD_DIR, filename)
@@ -101,10 +107,10 @@ def delete_image(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="게시글을 찾을 수 없습니다."
         )
-    if post.author_id != current_user.id:
+    if not can_edit_post(post, current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="본인 게시글의 이미지만 삭제할 수 있습니다."
+            detail="공동 편집자만 이미지를 삭제할 수 있습니다."
         )
 
     filename = os.path.basename(image.url)

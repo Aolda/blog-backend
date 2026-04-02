@@ -2,6 +2,7 @@ from sqlalchemy import JSON, Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.db.database import Base
+from app.db.models.post_user import post_users
 
 
 class Post(Base):
@@ -17,7 +18,8 @@ class Post(Base):
     views = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.now)
 
-    author = relationship("User", back_populates="posts")
+    author = relationship("User", back_populates="authored_posts", foreign_keys=[author_id])
+    users = relationship("User", secondary=post_users, back_populates="posts")
     images = relationship(
         "Image",
         back_populates="post",
