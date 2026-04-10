@@ -301,9 +301,6 @@ alembic downgrade -1
 alembic current
 ```
 
-공동 편집 기능을 위해 `post_users` 테이블 마이그레이션이 포함되어 있습니다.
-이미지 업로드를 위해 `images.object_key` 컬럼 마이그레이션도 포함되어 있습니다.
-
 ## 로컬 Keycloak 테스트 메모
 
 로컬 HTTPS 환경에서는 Portless와 같은 도구를 이용해 다음 조합으로 테스트할 수 있습니다.
