@@ -7,7 +7,6 @@ from sqlalchemy.orm import Session
 from app.db.models import Post as PostModel, User as UserModel
 from app.db.schemas.post import (
     PostContentUpdate,
-    PostFrontmatter,
     PostResponse,
     PostSummaryResponse,
     PostTemplateResponse,
@@ -32,40 +31,12 @@ def get_post_author_names(post: PostModel) -> List[str]:
     return []
 
 
-def build_frontmatter(post: PostModel, author_names: List[str]) -> PostFrontmatter:
-    date_str = post.created_at.strftime("%Y-%m-%d")
-    return PostFrontmatter(
-        title=post.title or "",
-        description=post.description or "",
-        date=date_str,
-        tags=post.tags or [],
-        image=post.image or "",
-        author=author_names,
-    )
-
-
-def build_frontmatter_header(frontmatter: PostFrontmatter) -> str:
-    tags_text = ", ".join([f"'{tag}'" for tag in frontmatter.tags])
-    author_text = ", ".join([f"'{author}'" for author in frontmatter.author])
-    return (
-        "---\n"
-        f"title: '{frontmatter.title}'\n"
-        f"description: '{frontmatter.description}'\n"
-        f"date: {frontmatter.date}\n"
-        f"tags: [{tags_text}]\n"
-        f"image: '{frontmatter.image}'\n"
-        f"author: [{author_text}]\n"
-        "---"
-    )
-
-
 def serialize_post(
     post: PostModel,
     include_content: bool,
     current_user: UserModel | None = None,
 ) -> dict:
     author_names = get_post_author_names(post)
-    frontmatter = build_frontmatter(post, author_names)
     payload = {
         "id": post.id,
         "author_id": post.author_id,
@@ -77,8 +48,6 @@ def serialize_post(
         "description": post.description,
         "tags": post.tags or [],
         "image": post.image,
-        "frontmatter": frontmatter,
-        "frontmatter_header": build_frontmatter_header(frontmatter),
     }
     if include_content:
         payload["content"] = post.content

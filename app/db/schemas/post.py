@@ -21,15 +21,6 @@ class PostContentUpdate(BaseModel):
     authors: Optional[List[str]] = None
 
 
-class PostFrontmatter(BaseModel):
-    title: str
-    description: str
-    date: str
-    tags: List[str]
-    image: str
-    author: List[str]
-
-
 class PostSummaryResponse(BaseModel):
     id: int
     author_id: Optional[int] = None
@@ -41,8 +32,6 @@ class PostSummaryResponse(BaseModel):
     description: Optional[str] = None
     tags: List[str] = Field(default_factory=list)
     image: Optional[str] = None
-    frontmatter: PostFrontmatter
-    frontmatter_header: str
 
 
 class PostResponse(PostSummaryResponse):
