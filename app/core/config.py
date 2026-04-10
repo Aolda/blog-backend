@@ -32,4 +32,12 @@ class Settings(BaseSettings):
         return [console_page_url, frontend_url]
 
 
+    # S3 / R2 object storage
+    S3_ENDPOINT_URL: str = ""
+    S3_REGION: str = "auto"
+    S3_ACCESS_KEY_ID: str = ""
+    S3_SECRET_ACCESS_KEY: str = ""
+    S3_BUCKET_NAME: str = ""
+    S3_PUBLIC_BASE_URL: str = ""
+
 settings = Settings()

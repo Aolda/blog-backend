@@ -1,9 +1,7 @@
-import os
 import uuid
 from typing import List
 
-import aiofiles
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
@@ -11,13 +9,9 @@ from app.api.deps import get_current_user
 from app.db.database import get_db
 from app.db.models import Image as ImageModel, Post as PostModel, User as UserModel
 from app.db.schemas.image import ImageResponse, ImageUploadResponse
+from app.services.object_storage import delete_object, upload_object
 
 router = APIRouter()
-
-UPLOAD_DIR = "uploads"
-
-if not os.path.exists(UPLOAD_DIR):
-    os.makedirs(UPLOAD_DIR)
 
 
 def can_edit_post(post: PostModel, current_user: UserModel) -> bool:
@@ -28,7 +22,6 @@ def can_edit_post(post: PostModel, current_user: UserModel) -> bool:
 
 @router.post("/", response_model=ImageUploadResponse, status_code=201)
 async def upload_image(
-    request: Request,
     post_id: int = Form(...),
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
@@ -36,7 +29,7 @@ async def upload_image(
 ):
     """
     이미지 업로드 API
-    - 파일을 받아 서버에 저장하고 post_id와 함께 DB에 저장.
+    - 파일을 받아 S3 호환 스토리지(R2 등)에 저장하고 post_id와 함께 DB에 저장.
     """
     post = db.query(PostModel).filter(PostModel.id == post_id).first()
     if post is None:
@@ -44,18 +37,19 @@ async def upload_image(
     if not can_edit_post(post, current_user):
         raise HTTPException(status_code=403, detail="공동 편집자만 이미지를 업로드할 수 있습니다.")
 
-    filename = f"{uuid.uuid4()}{os.path.splitext(file.filename)[1]}"
-    file_path = os.path.join(UPLOAD_DIR, filename)
+    extension = os.path.splitext(file.filename or "")[1]
+    filename = f"{uuid.uuid4()}{extension}"
+    object_key = f"posts/{post_id}/{filename}"
 
     try:
-        async with aiofiles.open(file_path, "wb") as out_file:
-            content = await file.read()
-            await out_file.write(content)
-    except Exception:
-        raise HTTPException(status_code=500, detail="이미지 저장 중 오류가 발생했습니다.")
+        content = await file.read()
+        file_url = upload_object(object_key, content, file.content_type)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"이미지 저장 중 오류가 발생했습니다: {exc}") from exc
 
-    file_url = f"{request.base_url}uploads/{filename}"
-    image = ImageModel(post_id=post_id, url=file_url)
+    image = ImageModel(post_id=post_id, url=file_url, object_key=object_key)
     db.add(image)
     db.commit()
     db.refresh(image)
@@ -92,7 +86,7 @@ def delete_image(
 ):
     """
     이미지 삭제 API
-    - DB + uploads 파일을 함께 삭제.
+    - DB와 오브젝트 스토리지를 함께 정리합니다.
     """
     image = db.query(ImageModel).filter(ImageModel.id == image_id).first()
     if image is None:
@@ -113,11 +107,13 @@ def delete_image(
             detail="공동 편집자만 이미지를 삭제할 수 있습니다."
         )
 
-    filename = os.path.basename(image.url)
-    file_path = os.path.join(UPLOAD_DIR, filename)
+    if not image.object_key:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="이미지 오브젝트 키가 없습니다."
+        )
 
-    if os.path.exists(file_path):
-        os.remove(file_path)
+    delete_object(image.object_key)
 
     db.delete(image)
     db.commit()
