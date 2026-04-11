@@ -9,7 +9,9 @@ from app.core.config import settings # config.py의 db url 가져옴
 engine = create_engine(
     settings.DATABASE_URL,
     connect_args={"charset": "utf8mb4"},
-    echo=True
+    echo=True,
+    pool_pre_ping=True,
+    pool_recycle=3600
 )
 
 # 데이터베이스 세션 생성
