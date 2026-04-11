@@ -10,8 +10,8 @@ ABS(Aolda Blog Service) 백엔드 API 서버입니다.
 - SQLAlchemy
 - Alembic
 - MySQL
+- boto3
 - Authlib
-- Docker Compose
 
 ## 프로젝트 구조
 
@@ -39,7 +39,8 @@ abs-backend/
 │   └── main.py
 ├── alembic/
 │   └── versions/
-├── docker-compose.yml
+├── compose.yaml
+├── compose.production.yaml
 ├── Dockerfile
 └── requirements.txt
 ```
@@ -100,10 +101,8 @@ uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ### 2. Docker Compose 실행
 
 ```bash
-docker compose up -d --build
+docker compose -f compose.yaml up -d --build
 ```
-
-`docker-compose.yml`은 컨테이너 기동 시 `alembic upgrade head`를 먼저 실행한 뒤 Uvicorn 서버를 띄웁니다.
 
 ## 기본 정보
 
