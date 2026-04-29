@@ -217,10 +217,10 @@ OAuth `state`를 이용해 로그인 시작 환경에 따라 적절한 콘솔 UR
 
 ### Posts
 
-- `POST /api/v1/posts/template`
+- `POST /api/v1/posts`
 - `GET /api/v1/posts`
 - `GET /api/v1/posts/{post_id}`
-- `PUT /api/v1/posts/{post_id}/content`
+- `PUT /api/v1/posts/{post_id}`
 - `DELETE /api/v1/posts/{post_id}`
 - `POST /api/v1/posts/{post_id}/views`
 - `GET /api/v1/posts/{post_id}/views`
@@ -254,7 +254,7 @@ OAuth `state`를 이용해 로그인 시작 환경에 따라 적절한 콘솔 UR
 
 ## 게시글 저장 요청 형식
 
-`PUT /api/v1/posts/{post_id}/content` 요청 body는 다음 필드를 지원합니다.
+`PUT /api/v1/posts/{post_id}` 요청 body는 다음 필드를 지원합니다.
 
 ```json
 {
