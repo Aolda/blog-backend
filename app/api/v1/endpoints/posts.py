@@ -60,9 +60,8 @@ def create_post_template(
     current_user: UserModel = Depends(get_current_user) # 로그인 필수
 ):
     """
-    MDX 작성용 템플릿 API
-    - db에 빈 레코드 만들고 post_id 발급
-    - 프론트에서 MDX 파일 만들 때 필요한 메타데이터를 JSON으로 반환
+    게시글 생성 API
+    - DB에 빈 게시글 레코드를 만들고 post_id를 발급합니다.
     """
     
     # db에 ID 발급용 레코드 생성
@@ -76,26 +75,7 @@ def create_post_template(
     db.commit()
     db.refresh(new_post)
     
-    date_str = new_post.created_at.strftime("%Y-%m-%d")
-    
-    frontmatter_example = (
-        "---\n"
-        "title: ''\n"
-        "description: ''\n"
-        f"date: {date_str}\n"
-        "tags: []\n"
-        "image: ''\n"
-        f"author: ['{current_user.username}']\n"
-        "---\n"
-    )
-    
-    return PostTemplateResponse(
-        post_id=new_post.id,
-        author_name=current_user.username,
-        author_names=[current_user.username],
-        created_at=date_str,
-        frontmatter_example=frontmatter_example
-    )
+    return PostTemplateResponse(post_id=new_post.id)
 
 @router.get("", response_model=List[PostSummaryResponse])
 def list_posts(

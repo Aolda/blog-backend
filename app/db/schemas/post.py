@@ -6,10 +6,6 @@ from pydantic import BaseModel, Field
 
 class PostTemplateResponse(BaseModel):
     post_id: int
-    author_name: str
-    author_names: List[str] = Field(default_factory=list)
-    created_at: str
-    frontmatter_example: str
 
 
 class PostContentUpdate(BaseModel):
