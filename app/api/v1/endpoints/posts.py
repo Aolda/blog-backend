@@ -54,8 +54,8 @@ def serialize_post(
     return payload
 
 
-@router.post("/template", response_model=PostTemplateResponse)
-def create_post_template(
+@router.post("", response_model=PostTemplateResponse)
+def create_post(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user) # 로그인 필수
 ):
@@ -117,15 +117,15 @@ def get_post_detail(
         raise HTTPException(status_code=404, detail="게시글을 찾을 수 없습니다.")
     return serialize_post(post, include_content=True, current_user=current_user)
 
-@router.put("/{post_id}/content", response_model=PostResponse)
-def update_post_content(
+@router.put("/{post_id}", response_model=PostResponse)
+def update_post(
     post_id: int,
     post_in: PostContentUpdate,
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user),
 ):
     """
-    게시글 본문 저장 API
+    게시글 수정 API
     """
     post = db.query(PostModel).filter(PostModel.id == post_id).first()
     if post is None:
