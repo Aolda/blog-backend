@@ -49,13 +49,20 @@ abs-backend/
 
 `.env` 파일이 필요합니다.
 
-```env
-DATABASE_URL=mysql+pymysql://root:<password>@127.0.0.1:3306/abs_db
+환경 변수는 항상 [`.env.example`](/Users/suyeon/AjouUniv/Aolda/ABS/abs-backend/.env.example) 를 기준으로 맞춥니다.  
+새 설정을 추가하거나 이름을 바꿀 때는 `.env.example`을 먼저 갱신하고, 필요하면 README 예시도 함께 수정합니다.
 
+```env
+DATABASE_URL=mysql+pymysql://user:password@db:3306/abs_db
+
+SESSION_SECRET_KEY=<session-secret>
 JWT_SECRET_KEY=<secret>
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=60
 REFRESH_TOKEN_EXPIRE_MINUTES=10080
+
+GOOGLE_CLIENT_ID=<google-client-id>
+GOOGLE_CLIENT_SECRET=<google-client-secret>
 
 KEYCLOAK_ISSUER_URI=https://sso.example.com/realms/<realm>
 KEYCLOAK_CLIENT_ID=<keycloak-client-id>
@@ -63,6 +70,7 @@ KEYCLOAK_CLIENT_SECRET=<keycloak-client-secret>
 
 API_SERVER_URL=https://blog-api.example.com
 CONSOLE_PAGE_URL=https://blog.example.com
+FRONTEND_URL=https://blog.example.com
 
 S3_ENDPOINT_URL=https://<ACCOUNT_ID>.r2.cloudflarestorage.com
 S3_REGION=auto
@@ -74,11 +82,14 @@ S3_PUBLIC_BASE_URL=https://<public-bucket-url>
 
 설명:
 - `DATABASE_URL`: 애플리케이션이 사용할 DB 연결 문자열
+- `SESSION_SECRET_KEY`: 세션 미들웨어 서명 키
 - `JWT_SECRET_KEY`: 내부 JWT 서명 키
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`: OAuth 호환용 클라이언트 설정
 - `KEYCLOAK_ISSUER_URI`: Keycloak realm issuer URI
 - `KEYCLOAK_CLIENT_ID`, `KEYCLOAK_CLIENT_SECRET`: Keycloak OIDC 클라이언트 정보
 - `API_SERVER_URL`: Keycloak callback URL 생성에 사용할 백엔드 base URL
 - `CONSOLE_PAGE_URL`: 로그인 후 기본적으로 돌아갈 프론트 콘솔 URL
+- `FRONTEND_URL`: 기본 CORS 허용 대상 프론트 URL
 - `S3_*`: Cloudflare R2 등 S3 호환 스토리지 업로드 설정
 
 주의:
