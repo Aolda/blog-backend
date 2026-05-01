@@ -231,9 +231,32 @@ OAuth `state`를 이용해 로그인 시작 환경에 따라 적절한 콘솔 UR
 - `GET /api/v1/images/posts/{post_id}`
 - `DELETE /api/v1/images/{image_id}`
 
+## 페이지네이션
+
+목록형 API는 공통으로 아래 요청 파라미터를 사용합니다.
+
+- `page`
+- `limit`
+
+목록형 응답은 공통으로 아래 형태를 반환합니다.
+
+```json
+{
+  "items": [],
+  "page": 1,
+  "limit": 20,
+  "total": 0
+}
+```
+
+현재 적용 대상:
+
+- `GET /api/v1/posts`
+- `GET /api/v1/users/authors`
+
 ## 게시글 응답 형식
 
-게시글 목록/상세 응답에는 다음 정보가 포함됩니다.
+게시글 상세 응답에는 다음 정보가 포함됩니다.
 
 - `id`
 - `author_id`

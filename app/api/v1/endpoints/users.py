@@ -1,10 +1,14 @@
-from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
 from app.db.models import User as UserModel
-from app.db.schemas.user import User as UserSchema, UserUpdate, AuthorResponse
+from app.db.schemas.user import (
+    AuthorResponse,
+    PaginatedAuthorsResponse,
+    User as UserSchema,
+    UserUpdate,
+)
 from app.api.deps import get_current_user
 
 router = APIRouter()
@@ -46,18 +50,26 @@ def update_user_me(
     return current_user
 
 # 블로그용 작성자 목록
-@router.get("/authors", response_model=List[AuthorResponse])
+@router.get("/authors", response_model=PaginatedAuthorsResponse)
 def read_authors(
-    skip: int = 0,
-    limit: int = 100,
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db)
 ):
     """
     블로그 작성자 목록 조회 API (프론트엔드 연동용)
     """
     
-    users = db.query(UserModel).order_by(UserModel.id.desc()).offset(skip).limit(limit).all()
-    return users
+    skip = (page - 1) * limit
+    query = db.query(UserModel).order_by(UserModel.id.desc())
+    total = query.count()
+    users = query.offset(skip).limit(limit).all()
+    return PaginatedAuthorsResponse(
+        items=users,
+        page=page,
+        limit=limit,
+        total=total,
+    )
 
 @router.get("/{username}", response_model=AuthorResponse)
 def read_user_by_username(

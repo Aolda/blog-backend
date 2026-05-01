@@ -32,3 +32,10 @@ class PostSummaryResponse(BaseModel):
 
 class PostResponse(PostSummaryResponse):
     content: Optional[str] = None
+
+
+class PaginatedPostsResponse(BaseModel):
+    items: List[PostSummaryResponse] = Field(default_factory=list)
+    page: int
+    limit: int
+    total: int

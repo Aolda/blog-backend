@@ -1,11 +1,12 @@
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import Response
 from sqlalchemy.orm import joinedload
 from sqlalchemy.orm import Session
 from app.db.models import Post as PostModel, User as UserModel
 from app.db.schemas.post import (
+    PaginatedPostsResponse,
     PostContentUpdate,
     PostResponse,
     PostSummaryResponse,
@@ -77,10 +78,10 @@ def create_post(
     
     return PostTemplateResponse(post_id=new_post.id)
 
-@router.get("", response_model=List[PostSummaryResponse])
+@router.get("", response_model=PaginatedPostsResponse)
 def list_posts(
-    page: int = 1,
-    limit: int = 20,
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
     current_user: UserModel | None = Depends(get_optional_current_user),
 ):
@@ -88,15 +89,19 @@ def list_posts(
     게시글 목록 조회 API
     """
     skip = (page - 1) * limit
-    posts = (
+    query = (
         db.query(PostModel)
         .options(joinedload(PostModel.author), joinedload(PostModel.users))
         .order_by(PostModel.created_at.desc())
-        .offset(skip)
-        .limit(limit)
-        .all()
     )
-    return [serialize_post(post, include_content=False, current_user=current_user) for post in posts]
+    total = query.count()
+    posts = query.offset(skip).limit(limit).all()
+    return PaginatedPostsResponse(
+        items=[serialize_post(post, include_content=False, current_user=current_user) for post in posts],
+        page=page,
+        limit=limit,
+        total=total,
+    )
 
 @router.get("/{post_id}", response_model=PostResponse)
 def get_post_detail(
