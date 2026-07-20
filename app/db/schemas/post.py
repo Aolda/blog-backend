@@ -15,6 +15,7 @@ class PostContentUpdate(BaseModel):
     image: Optional[str] = None
     content: str
     authors: Optional[List[str]] = None
+    is_published: Optional[bool] = None
 
 
 class PostSummaryResponse(BaseModel):
@@ -24,6 +25,7 @@ class PostSummaryResponse(BaseModel):
     can_edit: bool = False
     views: int = 0
     created_at: datetime
+    is_published: bool = False
     title: Optional[str] = None
     description: Optional[str] = None
     tags: List[str] = Field(default_factory=list)

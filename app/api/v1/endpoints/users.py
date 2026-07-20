@@ -1,8 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.orm import joinedload
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
-from app.db.models import User as UserModel
+from app.db.models import Post as PostModel, User as UserModel
+from app.db.schemas.post import PaginatedPostsResponse
 from app.db.schemas.user import (
     AuthorResponse,
     PaginatedAuthorsResponse,
@@ -10,6 +12,7 @@ from app.db.schemas.user import (
     UserUpdate,
 )
 from app.api.deps import get_current_user
+from app.api.v1.endpoints.posts import serialize_post
 
 router = APIRouter()
 
@@ -88,3 +91,38 @@ def read_user_by_username(
         )
         
     return user
+
+
+@router.get("/{username}/posts", response_model=PaginatedPostsResponse)
+def read_published_posts_by_username(
+    username: str,
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db),
+):
+    """
+    특정 사용자가 공동 편집자로 포함된 공개 게시글 목록 조회 API.
+    """
+    user = db.query(UserModel).filter(UserModel.username == username).first()
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="사용자를 찾을 수 없습니다.",
+        )
+
+    skip = (page - 1) * limit
+    query = (
+        db.query(PostModel)
+        .join(PostModel.users)
+        .options(joinedload(PostModel.author), joinedload(PostModel.users))
+        .filter(UserModel.id == user.id, PostModel.is_published.is_(True))
+        .order_by(PostModel.created_at.desc())
+    )
+    total = query.count()
+    posts = query.offset(skip).limit(limit).all()
+    return PaginatedPostsResponse(
+        items=[serialize_post(post, include_content=False) for post in posts],
+        page=page,
+        limit=limit,
+        total=total,
+    )

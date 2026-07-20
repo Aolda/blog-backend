@@ -214,6 +214,7 @@ OAuth `state`를 이용해 로그인 시작 환경에 따라 적절한 콘솔 UR
 - `PUT /api/v1/users/me`
 - `GET /api/v1/users/authors`
 - `GET /api/v1/users/{username}`
+- `GET /api/v1/users/{username}/posts`
 
 ### Posts
 
@@ -253,6 +254,7 @@ OAuth `state`를 이용해 로그인 시작 환경에 따라 적절한 콘솔 UR
 
 - `GET /api/v1/posts`
 - `GET /api/v1/users/authors`
+- `GET /api/v1/users/{username}/posts`
 
 ## 게시글 응답 형식
 
@@ -264,6 +266,7 @@ OAuth `state`를 이용해 로그인 시작 환경에 따라 적절한 콘솔 UR
 - `can_edit`
 - `views`
 - `created_at`
+- `is_published`
 - `title`
 - `description`
 - `tags`
@@ -274,6 +277,7 @@ OAuth `state`를 이용해 로그인 시작 환경에 따라 적절한 콘솔 UR
 
 - `authors`: 공동 편집자 username 배열
 - `can_edit`: 현재 사용자가 이 글을 수정할 수 있는지 여부
+- `is_published`: 외부 공개 여부
 
 ## 게시글 저장 요청 형식
 
@@ -286,7 +290,8 @@ OAuth `state`를 이용해 로그인 시작 환경에 따라 적절한 콘솔 UR
   "tags": ["tag1", "tag2"],
   "image": null,
   "content": "본문",
-  "authors": ["alice", "bob"]
+  "authors": ["alice", "bob"],
+  "is_published": false
 }
 ```
 
@@ -294,6 +299,8 @@ OAuth `state`를 이용해 로그인 시작 환경에 따라 적절한 콘솔 UR
 - `authors`는 선택값입니다.
 - 값이 들어오면 공동 편집자 목록을 해당 username 배열로 갱신합니다.
 - 존재하지 않는 username이 포함되면 `400 Bad Request` 를 반환합니다.
+- `is_published`는 선택값입니다. 값이 들어오면 외부 공개 여부를 갱신합니다.
+- `is_published`가 `true`인 게시글만 사용자별 공개 글 목록에 노출됩니다.
 
 ## 이미지 처리
 

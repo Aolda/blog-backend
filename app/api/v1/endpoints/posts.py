@@ -45,6 +45,7 @@ def serialize_post(
         "can_edit": bool(current_user and can_edit_post(post, current_user)),
         "views": post.views or 0,
         "created_at": post.created_at,
+        "is_published": post.is_published,
         "title": post.title,
         "description": post.description,
         "tags": post.tags or [],
@@ -143,6 +144,8 @@ def update_post(
     post.tags = post_in.tags
     post.image = post_in.image
     post.content = post_in.content
+    if post_in.is_published is not None:
+        post.is_published = post_in.is_published
     if post_in.authors is not None:
         author_usernames = list(dict.fromkeys(post_in.authors))
         authors = (
