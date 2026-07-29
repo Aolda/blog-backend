@@ -213,6 +213,7 @@ OAuth `state`를 이용해 로그인 시작 환경에 따라 적절한 콘솔 UR
 - `GET /api/v1/users/me`
 - `PUT /api/v1/users/me`
 - `GET /api/v1/users/authors`
+- `GET /api/v1/users/keycloak/{keycloak_sub}/posts`
 - `GET /api/v1/users/{username}`
 - `GET /api/v1/users/{username}/posts`
 
@@ -254,6 +255,7 @@ OAuth `state`를 이용해 로그인 시작 환경에 따라 적절한 콘솔 UR
 
 - `GET /api/v1/posts`
 - `GET /api/v1/users/authors`
+- `GET /api/v1/users/keycloak/{keycloak_sub}/posts`
 - `GET /api/v1/users/{username}/posts`
 
 ## 게시글 응답 형식
