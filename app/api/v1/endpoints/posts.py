@@ -1,11 +1,12 @@
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import Response
 from sqlalchemy.orm import joinedload
 from sqlalchemy.orm import Session
 from app.db.models import Post as PostModel, User as UserModel
 from app.db.schemas.post import (
+    PaginatedPostsResponse,
     PostContentUpdate,
     PostResponse,
     PostSummaryResponse,
@@ -20,6 +21,12 @@ def can_edit_post(post: PostModel, current_user: UserModel) -> bool:
     if any(user.id == current_user.id for user in post.users):
         return True
     return post.author_id == current_user.id
+
+
+def can_view_post(post: PostModel, current_user: UserModel | None) -> bool:
+    if post.is_published:
+        return True
+    return bool(current_user and can_edit_post(post, current_user))
 
 
 def get_post_author_names(post: PostModel) -> List[str]:
@@ -44,6 +51,7 @@ def serialize_post(
         "can_edit": bool(current_user and can_edit_post(post, current_user)),
         "views": post.views or 0,
         "created_at": post.created_at,
+        "is_published": post.is_published,
         "title": post.title,
         "description": post.description,
         "tags": post.tags or [],
@@ -54,15 +62,14 @@ def serialize_post(
     return payload
 
 
-@router.post("/template", response_model=PostTemplateResponse)
-def create_post_template(
+@router.post("", response_model=PostTemplateResponse)
+def create_post(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user) # 로그인 필수
 ):
     """
-    MDX 작성용 템플릿 API
-    - db에 빈 레코드 만들고 post_id 발급
-    - 프론트에서 MDX 파일 만들 때 필요한 메타데이터를 JSON으로 반환
+    게시글 생성 API
+    - DB에 빈 게시글 레코드를 만들고 post_id를 발급합니다.
     """
     
     # db에 ID 발급용 레코드 생성
@@ -76,31 +83,12 @@ def create_post_template(
     db.commit()
     db.refresh(new_post)
     
-    date_str = new_post.created_at.strftime("%Y-%m-%d")
-    
-    frontmatter_example = (
-        "---\n"
-        "title: ''\n"
-        "description: ''\n"
-        f"date: {date_str}\n"
-        "tags: []\n"
-        "image: ''\n"
-        f"author: ['{current_user.username}']\n"
-        "---\n"
-    )
-    
-    return PostTemplateResponse(
-        post_id=new_post.id,
-        author_name=current_user.username,
-        author_names=[current_user.username],
-        created_at=date_str,
-        frontmatter_example=frontmatter_example
-    )
+    return PostTemplateResponse(post_id=new_post.id)
 
-@router.get("", response_model=List[PostSummaryResponse])
+@router.get("", response_model=PaginatedPostsResponse)
 def list_posts(
-    page: int = 1,
-    limit: int = 20,
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
     current_user: UserModel | None = Depends(get_optional_current_user),
 ):
@@ -108,15 +96,20 @@ def list_posts(
     게시글 목록 조회 API
     """
     skip = (page - 1) * limit
-    posts = (
+    query = (
         db.query(PostModel)
         .options(joinedload(PostModel.author), joinedload(PostModel.users))
+        .filter(PostModel.is_published.is_(True))
         .order_by(PostModel.created_at.desc())
-        .offset(skip)
-        .limit(limit)
-        .all()
     )
-    return [serialize_post(post, include_content=False, current_user=current_user) for post in posts]
+    total = query.count()
+    posts = query.offset(skip).limit(limit).all()
+    return PaginatedPostsResponse(
+        items=[serialize_post(post, include_content=False, current_user=current_user) for post in posts],
+        page=page,
+        limit=limit,
+        total=total,
+    )
 
 @router.get("/{post_id}", response_model=PostResponse)
 def get_post_detail(
@@ -133,19 +126,19 @@ def get_post_detail(
         .filter(PostModel.id == post_id)
         .first()
     )
-    if post is None:
+    if post is None or not can_view_post(post, current_user):
         raise HTTPException(status_code=404, detail="게시글을 찾을 수 없습니다.")
     return serialize_post(post, include_content=True, current_user=current_user)
 
-@router.put("/{post_id}/content", response_model=PostResponse)
-def update_post_content(
+@router.put("/{post_id}", response_model=PostResponse)
+def update_post(
     post_id: int,
     post_in: PostContentUpdate,
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user),
 ):
     """
-    게시글 본문 저장 API
+    게시글 수정 API
     """
     post = db.query(PostModel).filter(PostModel.id == post_id).first()
     if post is None:
@@ -158,6 +151,8 @@ def update_post_content(
     post.tags = post_in.tags
     post.image = post_in.image
     post.content = post_in.content
+    if post_in.is_published is not None:
+        post.is_published = post_in.is_published
     if post_in.authors is not None:
         author_usernames = list(dict.fromkeys(post_in.authors))
         authors = (

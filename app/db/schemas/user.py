@@ -93,6 +93,13 @@ class AuthorResponse(BaseModel):
         return v or ""
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class PaginatedAuthorsResponse(BaseModel):
+    items: list[AuthorResponse]
+    page: int
+    limit: int
+    total: int
     
 # 로그인 요청용
 class UserLogin(BaseModel):

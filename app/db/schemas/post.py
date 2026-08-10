@@ -6,10 +6,6 @@ from pydantic import BaseModel, Field
 
 class PostTemplateResponse(BaseModel):
     post_id: int
-    author_name: str
-    author_names: List[str] = Field(default_factory=list)
-    created_at: str
-    frontmatter_example: str
 
 
 class PostContentUpdate(BaseModel):
@@ -19,6 +15,7 @@ class PostContentUpdate(BaseModel):
     image: Optional[str] = None
     content: str
     authors: Optional[List[str]] = None
+    is_published: Optional[bool] = None
 
 
 class PostSummaryResponse(BaseModel):
@@ -28,6 +25,7 @@ class PostSummaryResponse(BaseModel):
     can_edit: bool = False
     views: int = 0
     created_at: datetime
+    is_published: bool = False
     title: Optional[str] = None
     description: Optional[str] = None
     tags: List[str] = Field(default_factory=list)
@@ -36,3 +34,10 @@ class PostSummaryResponse(BaseModel):
 
 class PostResponse(PostSummaryResponse):
     content: Optional[str] = None
+
+
+class PaginatedPostsResponse(BaseModel):
+    items: List[PostSummaryResponse] = Field(default_factory=list)
+    page: int
+    limit: int
+    total: int

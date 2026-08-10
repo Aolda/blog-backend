@@ -1,4 +1,4 @@
-from sqlalchemy import JSON, Column, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, JSON, Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.db.database import Base
@@ -15,6 +15,7 @@ class Post(Base):
     tags = Column(JSON, nullable=True)
     image = Column(String(2048), nullable=True)
     content = Column(Text, nullable=True)
+    is_published = Column(Boolean, nullable=False, default=False)
     views = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.now)
 

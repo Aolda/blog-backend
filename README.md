@@ -49,13 +49,20 @@ abs-backend/
 
 `.env` 파일이 필요합니다.
 
-```env
-DATABASE_URL=mysql+pymysql://root:<password>@127.0.0.1:3306/abs_db
+환경 변수는 항상 [`.env.example`](.env.example) 를 기준으로 맞춥니다.
+새 설정을 추가하거나 이름을 바꿀 때는 `.env.example`을 먼저 갱신하고, 필요하면 README 예시도 함께 수정합니다.
 
+```env
+DATABASE_URL=mysql+pymysql://user:password@db:3306/abs_db
+
+SESSION_SECRET_KEY=<session-secret>
 JWT_SECRET_KEY=<secret>
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=60
 REFRESH_TOKEN_EXPIRE_MINUTES=10080
+
+GOOGLE_CLIENT_ID=<google-client-id>
+GOOGLE_CLIENT_SECRET=<google-client-secret>
 
 KEYCLOAK_ISSUER_URI=https://sso.example.com/realms/<realm>
 KEYCLOAK_CLIENT_ID=<keycloak-client-id>
@@ -63,6 +70,7 @@ KEYCLOAK_CLIENT_SECRET=<keycloak-client-secret>
 
 API_SERVER_URL=https://blog-api.example.com
 CONSOLE_PAGE_URL=https://blog.example.com
+FRONTEND_URL=https://blog.example.com
 
 S3_ENDPOINT_URL=https://<ACCOUNT_ID>.r2.cloudflarestorage.com
 S3_REGION=auto
@@ -74,11 +82,14 @@ S3_PUBLIC_BASE_URL=https://<public-bucket-url>
 
 설명:
 - `DATABASE_URL`: 애플리케이션이 사용할 DB 연결 문자열
+- `SESSION_SECRET_KEY`: 세션 미들웨어 서명 키
 - `JWT_SECRET_KEY`: 내부 JWT 서명 키
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`: OAuth 호환용 클라이언트 설정
 - `KEYCLOAK_ISSUER_URI`: Keycloak realm issuer URI
 - `KEYCLOAK_CLIENT_ID`, `KEYCLOAK_CLIENT_SECRET`: Keycloak OIDC 클라이언트 정보
 - `API_SERVER_URL`: Keycloak callback URL 생성에 사용할 백엔드 base URL
 - `CONSOLE_PAGE_URL`: 로그인 후 기본적으로 돌아갈 프론트 콘솔 URL
+- `FRONTEND_URL`: 기본 CORS 허용 대상 프론트 URL
 - `S3_*`: Cloudflare R2 등 S3 호환 스토리지 업로드 설정
 
 주의:
@@ -202,14 +213,16 @@ OAuth `state`를 이용해 로그인 시작 환경에 따라 적절한 콘솔 UR
 - `GET /api/v1/users/me`
 - `PUT /api/v1/users/me`
 - `GET /api/v1/users/authors`
+- `GET /api/v1/users/keycloak/{keycloak_sub}/posts`
 - `GET /api/v1/users/{username}`
+- `GET /api/v1/users/{username}/posts`
 
 ### Posts
 
-- `POST /api/v1/posts/template`
+- `POST /api/v1/posts`
 - `GET /api/v1/posts`
 - `GET /api/v1/posts/{post_id}`
-- `PUT /api/v1/posts/{post_id}/content`
+- `PUT /api/v1/posts/{post_id}`
 - `DELETE /api/v1/posts/{post_id}`
 - `POST /api/v1/posts/{post_id}/views`
 - `GET /api/v1/posts/{post_id}/views`
@@ -220,9 +233,34 @@ OAuth `state`를 이용해 로그인 시작 환경에 따라 적절한 콘솔 UR
 - `GET /api/v1/images/posts/{post_id}`
 - `DELETE /api/v1/images/{image_id}`
 
+## 페이지네이션
+
+목록형 API는 공통으로 아래 요청 파라미터를 사용합니다.
+
+- `page`
+- `limit`
+
+목록형 응답은 공통으로 아래 형태를 반환합니다.
+
+```json
+{
+  "items": [],
+  "page": 1,
+  "limit": 20,
+  "total": 0
+}
+```
+
+현재 적용 대상:
+
+- `GET /api/v1/posts`
+- `GET /api/v1/users/authors`
+- `GET /api/v1/users/keycloak/{keycloak_sub}/posts`
+- `GET /api/v1/users/{username}/posts`
+
 ## 게시글 응답 형식
 
-게시글 목록/상세 응답에는 다음 정보가 포함됩니다.
+게시글 상세 응답에는 다음 정보가 포함됩니다.
 
 - `id`
 - `author_id`
@@ -230,6 +268,7 @@ OAuth `state`를 이용해 로그인 시작 환경에 따라 적절한 콘솔 UR
 - `can_edit`
 - `views`
 - `created_at`
+- `is_published`
 - `title`
 - `description`
 - `tags`
@@ -240,10 +279,11 @@ OAuth `state`를 이용해 로그인 시작 환경에 따라 적절한 콘솔 UR
 
 - `authors`: 공동 편집자 username 배열
 - `can_edit`: 현재 사용자가 이 글을 수정할 수 있는지 여부
+- `is_published`: 외부 공개 여부
 
 ## 게시글 저장 요청 형식
 
-`PUT /api/v1/posts/{post_id}/content` 요청 body는 다음 필드를 지원합니다.
+`PUT /api/v1/posts/{post_id}` 요청 body는 다음 필드를 지원합니다.
 
 ```json
 {
@@ -252,7 +292,8 @@ OAuth `state`를 이용해 로그인 시작 환경에 따라 적절한 콘솔 UR
   "tags": ["tag1", "tag2"],
   "image": null,
   "content": "본문",
-  "authors": ["alice", "bob"]
+  "authors": ["alice", "bob"],
+  "is_published": false
 }
 ```
 
@@ -260,6 +301,8 @@ OAuth `state`를 이용해 로그인 시작 환경에 따라 적절한 콘솔 UR
 - `authors`는 선택값입니다.
 - 값이 들어오면 공동 편집자 목록을 해당 username 배열로 갱신합니다.
 - 존재하지 않는 username이 포함되면 `400 Bad Request` 를 반환합니다.
+- `is_published`는 선택값입니다. 값이 들어오면 외부 공개 여부를 갱신합니다.
+- `is_published`가 `true`인 게시글만 사용자별 공개 글 목록에 노출됩니다.
 
 ## 이미지 처리
 
