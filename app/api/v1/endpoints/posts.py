@@ -23,6 +23,12 @@ def can_edit_post(post: PostModel, current_user: UserModel) -> bool:
     return post.author_id == current_user.id
 
 
+def can_view_post(post: PostModel, current_user: UserModel | None) -> bool:
+    if post.is_published:
+        return True
+    return bool(current_user and can_edit_post(post, current_user))
+
+
 def get_post_author_names(post: PostModel) -> List[str]:
     usernames = [user.username for user in post.users if user.username]
     if usernames:
@@ -93,6 +99,7 @@ def list_posts(
     query = (
         db.query(PostModel)
         .options(joinedload(PostModel.author), joinedload(PostModel.users))
+        .filter(PostModel.is_published.is_(True))
         .order_by(PostModel.created_at.desc())
     )
     total = query.count()
@@ -119,7 +126,7 @@ def get_post_detail(
         .filter(PostModel.id == post_id)
         .first()
     )
-    if post is None:
+    if post is None or not can_view_post(post, current_user):
         raise HTTPException(status_code=404, detail="게시글을 찾을 수 없습니다.")
     return serialize_post(post, include_content=True, current_user=current_user)
 
