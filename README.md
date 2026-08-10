@@ -49,7 +49,7 @@ abs-backend/
 
 `.env` 파일이 필요합니다.
 
-환경 변수는 항상 [`.env.example`](/Users/suyeon/AjouUniv/Aolda/ABS/abs-backend/.env.example) 를 기준으로 맞춥니다.  
+환경 변수는 항상 [`.env.example`](.env.example) 를 기준으로 맞춥니다.
 새 설정을 추가하거나 이름을 바꿀 때는 `.env.example`을 먼저 갱신하고, 필요하면 README 예시도 함께 수정합니다.
 
 ```env
