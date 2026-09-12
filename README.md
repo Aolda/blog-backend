@@ -227,6 +227,9 @@ OAuth `state`를 이용해 로그인 시작 환경에 따라 적절한 콘솔 UR
 - `POST /api/v1/posts/{post_id}/views`
 - `GET /api/v1/posts/{post_id}/views`
 
+`GET /api/v1/posts`는 로그인 사용자가 작성자 또는 공동 편집자인 글만 공개 여부와 관계없이 반환합니다.
+외부 공개 목록은 `/api/v1/users/{username}/posts` 또는 `/api/v1/users/keycloak/{keycloak_sub}/posts`를 사용합니다.
+
 ### Images
 
 - `POST /api/v1/images/`
