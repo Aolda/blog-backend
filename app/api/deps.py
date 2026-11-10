@@ -36,7 +36,7 @@ def get_current_user(
         # 토큰 디코딩
         payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.ALGORITHM])
         subject: str = payload.get("sub")
-        if subject is None:
+        if not isinstance(subject, str) or not subject or payload.get("token_type") != "access":
             raise credentials_exception
         token_data = TokenData(subject=subject)
     except JWTError:
@@ -71,7 +71,7 @@ def get_optional_current_user(
     try:
         payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.ALGORITHM])
         subject: str | None = payload.get("sub")
-        if subject is None:
+        if not isinstance(subject, str) or not subject or payload.get("token_type") != "access":
             return None
     except JWTError:
         return None

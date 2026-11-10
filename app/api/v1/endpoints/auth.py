@@ -37,7 +37,7 @@ def refresh_token(
         # 리프레시 토큰 유효성 검증
         payload = jwt.decode(refresh_token, settings.JWT_SECRET_KEY, algorithms=[settings.ALGORITHM])
         subject: str = payload.get("sub")
-        if subject is None:
+        if not isinstance(subject, str) or not subject or payload.get("token_type") != "refresh":
             raise credentials_exception
     except JWTError:
         raise credentials_exception

@@ -142,6 +142,9 @@ docker compose -f compose.yaml up -d --build
 - access token: API 인증용
 - refresh token: 재발급용
 
+JWT의 `token_type`으로 용도를 구분하며, 서로 바꿔 사용할 수 없습니다.
+용도 정보가 없는 기존 토큰은 사용할 수 없으므로 해당 변경 배포 후 다시 로그인해야 합니다.
+
 토큰 갱신 엔드포인트:
 - `POST /api/v1/auth/refresh`
 
