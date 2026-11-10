@@ -34,7 +34,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
         expire = datetime.now(timezone.utc) + timedelta(
             minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
         )
-    to_encode.update({"exp": expire})
+    to_encode.update({"exp": expire, "token_type": "access"})
     
     # 설정 파일에서 시크릿 키와 알고리즘 가져오기
     encoded_jwt = jwt.encode(
@@ -52,7 +52,7 @@ def create_refresh_token(data: dict, expires_delta: Optional[timedelta] = None) 
         expire = datetime.now(timezone.utc) + timedelta(
             minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES
         )
-    to_encode.update({"exp": expire})
+    to_encode.update({"exp": expire, "token_type": "refresh"})
     
     # 설정 파일에서 시크릿 키와 알고리즘 가져오기
     encoded_jwt = jwt.encode(
