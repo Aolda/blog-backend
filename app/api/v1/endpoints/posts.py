@@ -2,6 +2,7 @@ from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import Response
+from sqlalchemy import or_
 from sqlalchemy.orm import joinedload
 from sqlalchemy.orm import Session
 from app.db.models import Post as PostModel, User as UserModel
@@ -21,6 +22,12 @@ def can_edit_post(post: PostModel, current_user: UserModel) -> bool:
     if any(user.id == current_user.id for user in post.users):
         return True
     return post.author_id == current_user.id
+
+
+def can_view_post(post: PostModel, current_user: UserModel | None) -> bool:
+    if post.is_published:
+        return True
+    return bool(current_user and can_edit_post(post, current_user))
 
 
 def get_post_author_names(post: PostModel) -> List[str]:
@@ -84,16 +91,20 @@ def list_posts(
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
-    current_user: UserModel | None = Depends(get_optional_current_user),
+    current_user: UserModel = Depends(get_current_user),
 ):
     """
-    게시글 목록 조회 API
+    로그인 사용자가 작성자 또는 공동 편집자인 게시글 목록. 공개 여부와 무관합니다.
     """
     skip = (page - 1) * limit
     query = (
         db.query(PostModel)
         .options(joinedload(PostModel.author), joinedload(PostModel.users))
-        .order_by(PostModel.created_at.desc())
+        .filter(or_(
+            PostModel.author_id == current_user.id,
+            PostModel.users.any(UserModel.id == current_user.id),
+        ))
+        .order_by(PostModel.created_at.desc(), PostModel.id.desc())
     )
     total = query.count()
     posts = query.offset(skip).limit(limit).all()
@@ -119,7 +130,7 @@ def get_post_detail(
         .filter(PostModel.id == post_id)
         .first()
     )
-    if post is None:
+    if post is None or not can_view_post(post, current_user):
         raise HTTPException(status_code=404, detail="게시글을 찾을 수 없습니다.")
     return serialize_post(post, include_content=True, current_user=current_user)
 

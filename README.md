@@ -49,7 +49,7 @@ abs-backend/
 
 `.env` 파일이 필요합니다.
 
-환경 변수는 항상 [`.env.example`](/Users/suyeon/AjouUniv/Aolda/ABS/abs-backend/.env.example) 를 기준으로 맞춥니다.  
+환경 변수는 항상 [`.env.example`](.env.example) 를 기준으로 맞춥니다.
 새 설정을 추가하거나 이름을 바꿀 때는 `.env.example`을 먼저 갱신하고, 필요하면 README 예시도 함께 수정합니다.
 
 ```env
@@ -229,6 +229,9 @@ OAuth `state`를 이용해 로그인 시작 환경에 따라 적절한 콘솔 UR
 - `DELETE /api/v1/posts/{post_id}`
 - `POST /api/v1/posts/{post_id}/views`
 - `GET /api/v1/posts/{post_id}/views`
+
+`GET /api/v1/posts`는 로그인 사용자가 작성자 또는 공동 편집자인 글만 공개 여부와 관계없이 반환합니다.
+외부 공개 목록은 `/api/v1/users/{username}/posts` 또는 `/api/v1/users/keycloak/{keycloak_sub}/posts`를 사용합니다.
 
 ### Images
 
