@@ -19,6 +19,8 @@ with patch.dict(os.environ, {
     "KEYCLOAK_CLIENT_SECRET": "test",
 }):
     from app.api.v1.endpoints.posts import get_db, router
+    from app.api.v1.endpoints.users import router as users_router
+    from app.core.config import settings
     from app.core.security import create_access_token
     from app.db.database import Base
     from app.db.models import Post, User
@@ -72,3 +74,41 @@ class PostListTest(unittest.TestCase):
     def test_invalid_token_is_rejected(self):
         self.client.headers["Authorization"] = "Bearer invalid"
         self.assertEqual(self.client.get("/posts").status_code, 401)
+
+    def test_public_list_includes_linked_and_unlinked_published_posts(self):
+        db = self.client.app.dependency_overrides[get_db]()
+        self.user.keycloak_sub = "writer-sub"
+        db.get(Post, 2).published_slug = "private-post"
+        db.get(Post, 3).published_slug = "docker-volume"
+        unlinked_post = db.get(Post, 5)
+        unlinked_post.users.append(self.user)
+        db.commit()
+        self.client.app.include_router(users_router, prefix="/users")
+        del self.client.headers["Authorization"]
+
+        for path in ("/users/keycloak/writer-sub/posts", "/users/writer/posts"):
+            with self.subTest(path=path), patch.object(settings, "FRONTEND_URL", "https://blog.example.com/"):
+                response = self.client.get(path)
+                self.assertEqual(response.status_code, 200)
+                data = response.json()
+                self.assertEqual(data["total"], 2)
+                urls = {post["id"]: post["url"] for post in data["items"]}
+                self.assertEqual(urls, {3: "https://blog.example.com/blog/docker-volume/", 5: None})
+
+    def test_update_preserves_omitted_slug_and_clears_explicit_null(self):
+        path = "/posts/3"
+        for fields, expected in (
+            ({"published_slug": "docker-volume"}, "docker-volume"),
+            ({}, "docker-volume"),
+            ({"published_slug": None}, None),
+        ):
+            with self.subTest(fields=fields):
+                response = self.client.put(path, json={"content": "Test", **fields})
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.json()["published_slug"], expected)
+
+    def test_update_rejects_non_slug_links(self):
+        for invalid in ("https://other.example/post", "../other", "post?x=1", ""):
+            with self.subTest(invalid=invalid):
+                response = self.client.put("/posts/3", json={"content": "Test", "published_slug": invalid})
+                self.assertEqual(response.status_code, 422)

@@ -89,7 +89,7 @@ S3_PUBLIC_BASE_URL=https://<public-bucket-url>
 - `KEYCLOAK_CLIENT_ID`, `KEYCLOAK_CLIENT_SECRET`: Keycloak OIDC 클라이언트 정보
 - `API_SERVER_URL`: Keycloak callback URL 생성에 사용할 백엔드 base URL
 - `CONSOLE_PAGE_URL`: 로그인 후 기본적으로 돌아갈 프론트 콘솔 URL
-- `FRONTEND_URL`: 기본 CORS 허용 대상 프론트 URL
+- `FRONTEND_URL`: 공개 블로그 origin. CORS 허용 및 게시글 상세 URL 생성에 사용
 - `S3_*`: Cloudflare R2 등 S3 호환 스토리지 업로드 설정
 
 주의:
@@ -286,6 +286,8 @@ OAuth `state`를 이용해 로그인 시작 환경에 따라 적절한 콘솔 UR
 - `authors`: 공동 편집자 username 배열
 - `can_edit`: 현재 사용자가 이 글을 수정할 수 있는지 여부
 - `is_published`: 외부 공개 여부
+- `url`: 공개 글에 연결된 블로그 상세 URL. 비공개 또는 미연결 글은 `null`
+- `published_slug`: 연결된 블로그 주소의 슬러그 (상세 응답에만 포함)
 
 ## 게시글 저장 요청 형식
 
@@ -309,6 +311,8 @@ OAuth `state`를 이용해 로그인 시작 환경에 따라 적절한 콘솔 UR
 - 존재하지 않는 username이 포함되면 `400 Bad Request` 를 반환합니다.
 - `is_published`는 선택값입니다. 값이 들어오면 외부 공개 여부를 갱신합니다.
 - `is_published`가 `true`인 게시글만 사용자별 공개 글 목록에 노출됩니다.
+- 이미 발행한 글을 연결하려면 `published_slug`에 같은 글의 상세 주소 마지막 경로를 넣습니다. 예: `rename-docker-volume`. 이 설정으로 블로그에 글이 발행되지는 않습니다.
+- `published_slug`를 생략하면 기존 연결을 유지하고, `null`을 보내면 해제합니다. 링크가 없는 공개 글도 목록에 남으며 `url`은 `null`입니다.
 
 ## 이미지 처리
 
