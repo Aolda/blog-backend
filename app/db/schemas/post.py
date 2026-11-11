@@ -16,6 +16,9 @@ class PostContentUpdate(BaseModel):
     content: str
     authors: Optional[List[str]] = None
     is_published: Optional[bool] = None
+    published_slug: Optional[str] = Field(
+        default=None, max_length=255, pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$",
+    )
 
 
 class PostSummaryResponse(BaseModel):
@@ -26,6 +29,7 @@ class PostSummaryResponse(BaseModel):
     views: int = 0
     created_at: datetime
     is_published: bool = False
+    url: Optional[str] = None
     title: Optional[str] = None
     description: Optional[str] = None
     tags: List[str] = Field(default_factory=list)
@@ -34,6 +38,7 @@ class PostSummaryResponse(BaseModel):
 
 class PostResponse(PostSummaryResponse):
     content: Optional[str] = None
+    published_slug: Optional[str] = None
 
 
 class PaginatedPostsResponse(BaseModel):

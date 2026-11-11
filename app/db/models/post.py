@@ -16,6 +16,7 @@ class Post(Base):
     image = Column(String(2048), nullable=True)
     content = Column(Text, nullable=True)
     is_published = Column(Boolean, nullable=False, default=False)
+    published_slug = Column(String(255), nullable=True)
     views = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.now)
 

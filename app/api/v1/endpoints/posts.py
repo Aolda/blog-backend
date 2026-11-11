@@ -14,6 +14,7 @@ from app.db.schemas.post import (
     PostTemplateResponse,
 )
 from app.api.deps import get_db, get_current_user, get_optional_current_user
+from app.core.config import settings
 
 router = APIRouter()
 
@@ -60,6 +61,10 @@ def serialize_post(
     }
     if include_content:
         payload["content"] = post.content
+        payload["published_slug"] = post.published_slug
+    if post.is_published and post.published_slug:
+        blog_origin = settings.FRONTEND_URL.strip().rstrip("/")
+        payload["url"] = f"{blog_origin}/blog/{post.published_slug}/"
     return payload
 
 
@@ -157,6 +162,8 @@ def update_post(
     post.content = post_in.content
     if post_in.is_published is not None:
         post.is_published = post_in.is_published
+    if "published_slug" in post_in.model_fields_set:
+        post.published_slug = post_in.published_slug
     if post_in.authors is not None:
         author_usernames = list(dict.fromkeys(post_in.authors))
         authors = (
